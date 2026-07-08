@@ -1,0 +1,259 @@
+//src/pages/empleado/POSMobile.tsx
+import { useState } from 'react';
+import { useCartStore, type Producto } from '../../store/cartStore';
+import { Search, Smartphone, Headphones, ShoppingCart, ChevronLeft, User, CreditCard, Banknote, QrCode, X, Edit3, AlertTriangle, ScanLine } from 'lucide-react';
+
+const PRODUCTOS_DEMO = [
+  { id: '1', nombre: 'Samsung Galaxy S24', marca: 'Samsung', precioBase: 5569.03, requiereImei: true, moneda: 'USD', ram: '8 GB', almacenamiento: '256 GB', descripcion: 'Pantalla Dynamic AMOLED 6.2", cámara 50 MP, batería 4000 mAh.' },
+  { id: '2', nombre: 'iPhone 15 Pro', marca: 'Apple', precioBase: 7660.03, requiereImei: true, moneda: 'USD', ram: '8 GB', almacenamiento: '128 GB', descripcion: 'Chip A17 Pro, titanio, cámara 48 MP, USB-C.' },
+  { id: '3', nombre: 'Motorola Edge 40', marca: 'Motorola', precioBase: 1850.00, requiereImei: true, moneda: 'BOB', ram: '8 GB', almacenamiento: '256 GB', descripcion: 'Pantalla pOLED 144 Hz, carga rápida 68W.' },
+  { id: '4', nombre: 'Xiaomi Redmi Note 13', marca: 'Xiaomi', precioBase: 3826.53, requiereImei: true, moneda: 'USD', ram: '6 GB', almacenamiento: '128 GB', descripcion: 'AMOLED 120 Hz, cámara 108 MP, batería 5000 mAh.' },
+] as Producto[];
+
+export default function POSMobile() {
+  const [tabActiva, setTabActiva] = useState<'smartphones' | 'accesorios'>('smartphones');
+  const [vistaActual, setVistaActual] = useState<'catalogo' | 'checkout'>('catalogo');
+  const [metodoPago, setMetodoPago] = useState<'efectivo' | 'qr' | null>(null);
+
+  const { carrito, totalVenta, agregarProducto, eliminarProducto, actualizarImei, actualizarPrecioFinal, actualizarCantidad } = useCartStore();
+  const faltanImeis = carrito.some(item => item.requiereImei && (!item.imei1 || item.imei1.trim() === ''));
+
+  if (vistaActual === 'catalogo') {
+    return (
+      <div className="flex flex-col h-full animate-fade-in w-full bg-ruby-bgLight dark:bg-ruby-bgDark relative transition-colors">
+        <div className="flex-1 flex flex-col overflow-hidden pt-4 px-4 pb-32">
+          <div className="flex gap-2 overflow-x-auto pb-4 mb-2 snap-x hide-scrollbar mt-2">
+            <button onClick={() => setTabActiva('smartphones')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold border transition-colors flex items-center gap-2 ${tabActiva === 'smartphones' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
+              <Smartphone size={18} /> Smartphones <span className="bg-ruby-accent/20 px-2 py-0.5 rounded text-xs ml-1">4</span>
+            </button>
+            <button onClick={() => setTabActiva('accesorios')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold border transition-colors flex items-center gap-2 ${tabActiva === 'accesorios' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
+              <Headphones size={18} /> Accesorios <span className="bg-black/5 dark:bg-white/10 px-2 py-0.5 rounded text-xs ml-1">5</span>
+            </button>
+          </div>
+
+          <div className="relative mb-6">
+            <input type="text" placeholder="Buscar celular..." className="w-full bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/20 dark:border-ruby-textDark/20 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-ruby-accent transition-colors shadow-sm" />
+            <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" size={20} />
+          </div>
+
+          <div className="flex-1 overflow-y-auto">
+            <div className="grid grid-cols-2 gap-4 pb-6">
+              {PRODUCTOS_DEMO.filter(p => tabActiva === 'smartphones' ? p.requiereImei : !p.requiereImei).map((producto) => (
+                <div key={producto.id} onClick={() => agregarProducto(producto)} className="bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 p-4 rounded-2xl flex flex-col justify-between active:border-ruby-accent active:bg-ruby-accent/5 transition-colors cursor-pointer select-none shadow-sm">
+                  <div>
+                    <div className="flex justify-between items-start mb-3">
+                      <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-sm border border-black/5 dark:border-white/5">
+                        {producto.requiereImei ? <Smartphone size={16} /> : <Headphones size={16} />}
+                      </div>
+                      <span className="text-[10px] font-bold bg-blue-500/10 dark:bg-blue-500/20 text-blue-600 dark:text-blue-500 border border-blue-500/20 px-2 py-1 rounded">{producto.moneda}</span>
+                    </div>
+                    <p className="text-[10px] opacity-60 uppercase font-bold tracking-widest">{producto.marca}</p>
+                    <h3 className="font-bold text-base leading-tight mt-1 mb-3">{producto.nombre}</h3>
+                    {(producto.ram || producto.almacenamiento) && (
+                      <div className="flex gap-2 mb-3">
+                        {producto.ram && <span className="text-[10px] font-bold bg-ruby-accent/10 text-ruby-accent border border-ruby-accent/20 px-2 py-1 rounded">{producto.ram}</span>}
+                        {producto.almacenamiento && <span className="text-[10px] font-bold bg-ruby-accent/10 text-ruby-accent border border-ruby-accent/20 px-2 py-1 rounded">{producto.almacenamiento}</span>}
+                      </div>
+                    )}
+                    <p className="text-[10px] opacity-60 line-clamp-3 mb-2">{producto.descripcion}</p>
+                  </div>
+                  <div className="mt-2 flex justify-between items-end border-t border-ruby-textLight/10 dark:border-white/5 pt-3">
+                    <p className="text-ruby-priceLight dark:text-ruby-priceDark font-mono text-sm font-bold">Bs. {producto.precioBase}</p>
+                    <span className="text-ruby-accent font-light text-xl leading-none">+</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="absolute bottom-0 w-full bg-ruby-panelLight dark:bg-ruby-panelDark rounded-t-3xl border-t border-ruby-textLight/10 dark:border-ruby-textDark/10 z-30 p-5 shadow-[0_-20px_40px_rgba(0,0,0,0.1)] dark:shadow-[0_-20px_40px_rgba(0,0,0,0.5)] transition-colors">
+          {carrito.length === 0 ? (
+            <div className="flex flex-col items-center justify-center py-4">
+              <span className="bg-ruby-accent text-white px-3 py-1 rounded-full text-xs font-bold mb-4">Ticket de Venta</span>
+              <ShoppingCart className="opacity-20 mb-2" size={48} strokeWidth={1.5} />
+              <p className="opacity-50 text-sm font-bold">Tu carrito está vacío</p>
+              <div className="w-full flex justify-between items-end mt-6 mb-4">
+                <span className="font-bold opacity-60">TOTAL</span>
+                <span className="font-mono font-black text-3xl text-ruby-priceLight dark:text-ruby-priceDark">Bs. 0.00</span>
+              </div>
+              <button disabled className="w-full bg-ruby-textLight/10 dark:bg-ruby-accent/30 text-ruby-textLight/40 dark:text-white/50 py-4 rounded-xl font-bold text-lg transition-all flex justify-center items-center gap-2">
+                <CreditCard size={20} /> COBRAR
+              </button>
+            </div>
+          ) : (
+            <div>
+              <div className="flex justify-between items-center mb-4">
+                <span className="bg-ruby-accent/20 text-ruby-accent px-3 py-1 rounded-full text-xs font-bold">Ticket de Venta</span>
+                <span className="bg-black/5 dark:bg-white/10 px-3 py-1 rounded-full text-xs font-bold">{carrito.length} ítems</span>
+              </div>
+              <p className="text-xs opacity-60 mb-4 text-center">Toca un producto para añadirlo</p>
+              <div className="w-full flex justify-between items-end mb-4">
+                <span className="font-bold opacity-60">TOTAL</span>
+                <span className="font-mono font-black text-3xl text-ruby-priceLight dark:text-ruby-priceDark">Bs. {totalVenta.toFixed(2)}</span>
+              </div>
+              <button onClick={() => setVistaActual('checkout')} className="w-full bg-ruby-accent text-white py-4 rounded-xl font-bold text-lg active:scale-[0.98] transition-all shadow-lg shadow-ruby-accent/30 flex justify-center items-center gap-2">
+                <CreditCard size={20} /> COBRAR
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col h-full animate-fade-in w-full bg-ruby-bgLight dark:bg-ruby-bgDark relative z-50 transition-colors">
+      <header className="flex justify-between items-center p-5 bg-ruby-panelLight dark:bg-ruby-panelDark border-b border-ruby-textLight/10 dark:border-white/5 transition-colors">
+        <button onClick={() => setVistaActual('catalogo')} className="text-ruby-textLight dark:text-ruby-textDark opacity-70 hover:opacity-100 flex items-center gap-2">
+          <ChevronLeft size={24} />
+          <h2 className="font-bold text-lg">Confirmar Venta</h2>
+        </button>
+        <span className="bg-black/5 dark:bg-white/10 px-3 py-1 rounded-full text-xs font-bold opacity-70">{carrito.length} {carrito.length === 1 ? 'ítem' : 'ítems'}</span>
+      </header>
+
+      <div className="flex-1 overflow-y-auto p-5 pb-40">
+        <h3 className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-3 flex items-center gap-2">
+          <User size={14} /> DATOS DEL CLIENTE (opcional)
+        </h3>
+        <div className="bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-white/5 rounded-2xl p-4 mb-8 space-y-3 shadow-sm transition-colors">
+          <input type="text" placeholder="Nombre completo" className="w-full bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-ruby-accent transition-colors" />
+          <div className="flex gap-3">
+            <input type="text" placeholder="C.I." className="w-1/2 bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-ruby-accent transition-colors" />
+            <input type="text" placeholder="Teléfono" className="w-1/2 bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 px-4 text-sm outline-none focus:border-ruby-accent transition-colors" />
+          </div>
+        </div>
+
+        <h3 className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-3">PRODUCTOS</h3>
+        <div className="space-y-4 mb-8">
+          {carrito.map((item) => {
+            const imeiLleno = item.imei1 && item.imei1.trim() !== '';
+
+            return (
+              <div key={item.id} className="bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-white/5 rounded-2xl p-4 shadow-sm relative transition-colors">
+                <button onClick={() => eliminarProducto(item.id)} className="absolute top-4 right-4 opacity-50 hover:opacity-100 active:opacity-100">
+                  <X size={20} />
+                </button>
+
+                <div className="flex items-center gap-3 mb-4 pr-10">
+                  <div className="w-10 h-10 rounded-lg bg-ruby-accent/10 text-ruby-accent flex items-center justify-center border border-ruby-accent/20">
+                    {item.requiereImei ? <Smartphone size={20} /> : <Headphones size={20} />}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-base leading-none mb-1">{item.nombre}</h4>
+                    <p className="text-[10px] opacity-60 uppercase tracking-widest">{item.marca}</p>
+                  </div>
+                </div>
+
+                {/* Controles para Accesorios (Cantidad) */}
+                {!item.requiereImei && (
+                  <div className="flex justify-between items-center mb-4 pb-4 border-b border-ruby-textLight/10 dark:border-white/5">
+                    <span className="text-[10px] opacity-50 uppercase tracking-widest font-bold">Cantidad</span>
+                    <div className="flex items-center gap-3 bg-ruby-bgLight dark:bg-ruby-bgDark px-3 py-1.5 rounded-lg border border-ruby-textLight/10 dark:border-white/10">
+                      <button onClick={() => actualizarCantidad(item.id, item.cantidad - 1)} className="opacity-50 hover:opacity-100 font-bold px-2">—</button>
+                      <span className="font-bold text-sm w-4 text-center">{item.cantidad}</span>
+                      <button onClick={() => actualizarCantidad(item.id, item.cantidad + 1)} className="opacity-50 hover:opacity-100 font-bold px-2">+</button>
+                    </div>
+                  </div>
+                )}
+
+                <div className="flex justify-between items-center mb-4 pb-4 border-b border-ruby-textLight/10 dark:border-white/5">
+                  <span className="text-[10px] opacity-50 uppercase tracking-widest font-bold">Precio Final</span>
+                  <div className="flex items-center gap-2 group bg-ruby-bgLight dark:bg-ruby-bgDark px-3 py-1.5 rounded-lg border border-ruby-textLight/10 dark:border-white/10">
+                    <Edit3 className="opacity-50" size={12} />
+                    <input 
+                      type="number" 
+                      value={item.precioFinal} 
+                      onChange={(e) => actualizarPrecioFinal(item.id, Number(e.target.value))}
+                      className="w-20 text-right bg-transparent outline-none font-mono font-bold text-ruby-priceLight dark:text-ruby-priceDark" 
+                    />
+                  </div>
+                </div>
+
+                {/* NUEVO DISEÑO DE IMEI: Botón Escanear Separado */}
+                {item.requiereImei && (
+                  <div>
+                    <p className={`text-[10px] font-bold tracking-widest uppercase mb-3 flex items-center gap-2 ${imeiLleno ? 'text-emerald-500' : 'text-ruby-accent'}`}>
+                      IMEI DEL EQUIPO · {imeiLleno ? 'REGISTRADO ✓' : 'IMEI 1 OBLIGATORIO'}
+                    </p>
+                    <div className="space-y-3">
+                      
+                      {/* Fila IMEI 1 */}
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30 text-xs font-bold">[ ]</span>
+                          <input 
+                            type="text" 
+                            placeholder="IMEI 1 — obligatorio" 
+                            value={item.imei1 || ''}
+                            onChange={(e) => actualizarImei(item.id, e.target.value, item.imei2)}
+                            className={`w-full bg-ruby-bgLight dark:bg-ruby-bgDark border rounded-xl py-3 pl-10 pr-4 text-xs font-mono outline-none transition-colors ${imeiLleno ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-500 focus:border-emerald-500' : 'border-ruby-accent/50 text-ruby-accent focus:border-ruby-accent'}`}
+                          />
+                        </div>
+                        {/* Botón de Escanear IMEI 1 */}
+                        <button className="bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl w-14 flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-ruby-accent/10 hover:text-ruby-accent hover:border-ruby-accent/50 transition-all active:scale-95">
+                          <ScanLine size={20} />
+                        </button>
+                      </div>
+
+                      {/* Fila IMEI 2 */}
+                      <div className="flex gap-2">
+                        <div className="relative flex-1">
+                          <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30 text-xs font-bold">[ ]</span>
+                          <input 
+                            type="text" 
+                            placeholder="IMEI 2 — opcional" 
+                            value={item.imei2 || ''}
+                            onChange={(e) => actualizarImei(item.id, item.imei1 || '', e.target.value)}
+                            className="w-full bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 pl-10 pr-4 text-xs font-mono outline-none focus:border-ruby-textLight/30 dark:focus:border-white/30 transition-colors"
+                          />
+                        </div>
+                        {/* Botón de Escanear IMEI 2 */}
+                        <button className="bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl w-14 flex items-center justify-center opacity-70 hover:opacity-100 hover:bg-ruby-accent/10 hover:text-ruby-accent hover:border-ruby-accent/50 transition-all active:scale-95">
+                          <ScanLine size={20} />
+                        </button>
+                      </div>
+
+                    </div>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+
+        <div className="bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-white/5 rounded-2xl p-5 mb-6 shadow-sm transition-colors">
+          <div className="flex justify-between items-center border-b border-ruby-textLight/10 dark:border-white/5 pb-3 mb-3">
+            <span className="opacity-60">Subtotal</span>
+            <span className="font-mono font-bold">Bs. {totalVenta.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between items-center">
+            <span className="font-black text-xl tracking-wide">TOTAL</span>
+            <span className="font-mono font-black text-2xl text-ruby-priceLight dark:text-ruby-priceDark">Bs. {totalVenta.toFixed(2)}</span>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-3 mb-8">
+          <button onClick={() => setMetodoPago('efectivo')} className={`py-4 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all ${metodoPago === 'efectivo' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'bg-ruby-panelLight dark:bg-ruby-panelDark border-ruby-textLight/10 dark:border-white/10 opacity-70'}`}>
+            <Banknote size={20} /> Efectivo
+          </button>
+          <button onClick={() => setMetodoPago('qr')} className={`py-4 rounded-xl font-bold flex items-center justify-center gap-2 border transition-all ${metodoPago === 'qr' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'bg-ruby-panelLight dark:bg-ruby-panelDark border-ruby-textLight/10 dark:border-white/10 opacity-70'}`}>
+            <QrCode size={20} /> QR
+          </button>
+        </div>
+      </div>
+
+      <div className="absolute bottom-0 w-full bg-ruby-bgLight dark:bg-ruby-bgDark border-t border-ruby-textLight/10 dark:border-white/5 p-5 pb-8 z-40 transition-colors">
+        {faltanImeis ? (
+          <button disabled className="w-full bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-accent/30 text-ruby-accent/50 py-4 rounded-2xl font-bold text-lg flex justify-center items-center gap-2 cursor-not-allowed">
+            <AlertTriangle size={20} /> Faltan IMEIs
+          </button>
+        ) : (
+          <button disabled={!metodoPago} className="w-full bg-ruby-accent text-white py-4 rounded-2xl font-black text-lg shadow-[0_10px_30px_rgba(239,68,68,0.3)] active:scale-[0.98] transition-all disabled:opacity-50 disabled:shadow-none flex justify-center items-center">
+            Confirmar Venta — Bs. {totalVenta.toFixed(2)}
+          </button>
+        )}
+      </div>
+    </div>
+  );
+}
