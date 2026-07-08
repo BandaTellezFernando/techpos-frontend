@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore, type Producto } from '../../store/cartStore';
-import { Smartphone, Headphones, Receipt, ShoppingCart, Edit3, X, Search, ChevronLeft, User, Banknote, QrCode, CreditCard, AlertTriangle, ScanLine } from 'lucide-react';
+import { Smartphone, Headphones, Receipt, ShoppingCart, Edit3, X, Search, ChevronLeft, User, Banknote, QrCode, CreditCard, AlertTriangle, ScanLine, CheckCircle2 } from 'lucide-react';
 import api from '../../api/axios'; 
 
-// Le decimos a TypeScript exactamente qué forma tiene la respuesta de nuestra BD
 interface ProductoAPI {
   _id: string;
   nombre: string;
@@ -24,17 +23,25 @@ export default function VentasDesktop() {
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [procesandoVenta, setProcesandoVenta] = useState(false);
+  const [toast, setToast] = useState<{mensaje: string, tipo: 'exito' | 'error'} | null>(null);
+
+  // CERROJO DE SEGURIDAD (Evita peticiones dobles)
+  const peticionEnCurso = useRef(false);
 
   const { carrito, totalVenta, agregarProducto, eliminarProducto, actualizarCantidad, actualizarPrecioFinal, actualizarImei, limpiarCarrito } = useCartStore();
   
   const faltanImeis = carrito.some(item => item.requiereImei && (!item.imei1 || item.imei1.trim() === ''));
 
-  const cargarInventario = async () => {
+  const mostrarNotificacion = (mensaje: string, tipo: 'exito' | 'error') => {
+    setToast({ mensaje, tipo });
+    setTimeout(() => setToast(null), 4000); 
+  };
+
+  const cargarInventario = useCallback(async () => {
     try {
       setCargando(true);
       const response = await api.get('/productos');
       
-      // Reemplazamos el 'any' por nuestra nueva interfaz 'ProductoAPI'
       const productosAjustados = response.data.productos.map((p: ProductoAPI) => ({
         id: p._id, 
         nombre: p.nombre,
@@ -49,25 +56,25 @@ export default function VentasDesktop() {
       }));
       setProductos(productosAjustados);
     } catch (error) {
-      console.error('Error al cargar productos:', error);
-      alert('Hubo un problema al conectar con el servidor.');
+      console.error(error);
+      mostrarNotificacion('Error de conexión con el servidor.', 'error');
     } finally {
       setCargando(false);
     }
-  };
+  }, []); 
 
   useEffect(() => {
-    // Usamos setTimeout para engañar al linter y evitar el error de 
-    // "Calling setState synchronously within an effect"
     setTimeout(() => {
       cargarInventario();
     }, 0);
-  }, []);
+  }, [cargarInventario]); 
 
   const confirmarVenta = async () => {
-    if (!metodoPago) return;
+    // Si la petición ya está en curso, ignoramos los clics extra silenciosamente
+    if (!metodoPago || peticionEnCurso.current) return;
     
     try {
+      peticionEnCurso.current = true; // Cerramos la puerta
       setProcesandoVenta(true);
       
       const detalle = carrito.map(item => ({
@@ -88,24 +95,33 @@ export default function VentasDesktop() {
         clienteInfo: 'Cliente Mostrador' 
       });
 
-      alert('¡Venta registrada con éxito!');
+      mostrarNotificacion('¡Venta registrada con éxito!', 'exito');
       limpiarCarrito();
       setVistaDerecha('carrito');
       setMetodoPago(null);
       cargarInventario(); 
 
     } catch (error) {
-      // Le decimos a TypeScript que este error tiene la estructura de Axios
       const err = error as { response?: { data?: { mensaje?: string } } };
       console.error('Error al procesar la venta:', error);
-      alert(err.response?.data?.mensaje || 'Error al confirmar la venta');
+      mostrarNotificacion(err.response?.data?.mensaje || 'Error al confirmar la venta.', 'error');
     } finally {
       setProcesandoVenta(false);
+      peticionEnCurso.current = false; // Abrimos la puerta de nuevo
     }
   };
 
   return (
-    <div className="flex w-full h-full animate-fade-in bg-ruby-bgLight dark:bg-ruby-bgDark transition-colors">
+    <div className="flex w-full h-full animate-fade-in bg-ruby-bgLight dark:bg-ruby-bgDark transition-colors relative overflow-hidden">
+      
+      {/* COMPONENTE TOAST (Notificación flotante) */}
+      {toast && (
+        <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl font-bold text-sm animate-fade-in ${toast.tipo === 'error' ? 'bg-ruby-accent text-white' : 'bg-emerald-500 text-white'}`}>
+          {toast.tipo === 'error' ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+          {toast.mensaje}
+        </div>
+      )}
+
       <div className="flex-1 flex flex-col p-8 overflow-hidden">
         
         <div className="flex justify-between items-start mb-8">
@@ -130,7 +146,7 @@ export default function VentasDesktop() {
           </div>
           <div className="flex-1 relative">
             <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" />
-            <input type="text" placeholder="Buscar celular..." className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/10 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-ruby-accent transition-colors shadow-sm" />
+            <input type="text" placeholder="Buscar producto..." className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/10 dark:border-white/5 rounded-xl py-3 pl-12 pr-4 outline-none focus:border-ruby-accent transition-colors shadow-sm" />
           </div>
           <span className="text-sm opacity-50 font-semibold whitespace-nowrap">{productos.length} productos</span>
         </div>
@@ -181,9 +197,6 @@ export default function VentasDesktop() {
         </div>
       </div>
 
-      {/* ==========================================
-          COLUMNA DERECHA: CARRITO / CHECKOUT
-          ========================================== */}
       <aside className="w-[450px] bg-white dark:bg-[#1E1717] border-l border-ruby-textLight/10 dark:border-white/5 flex flex-col shadow-2xl relative z-10 transition-colors">
         
         {vistaDerecha === 'carrito' && (
