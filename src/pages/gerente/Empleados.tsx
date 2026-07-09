@@ -228,16 +228,18 @@ export default function Empleados() {
                     className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors disabled:opacity-50" 
                   />
                 </div>
-                <div className="flex-1">
-                  <label className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-2 block">Rol / Cargo</label>
-                  <input 
-                    type="text" 
-                    value={formData.rol}
-                    onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
-                    placeholder="Ej. Vendedor" 
-                    className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors" 
-                  />
-                </div>
+                {/* ELIMINA EL INPUT DE TEXTO Y PON ESTE SELECTOR */}
+<div className="flex-1">
+  <label className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-2 block">Rol / Cargo</label>
+  <select 
+    value={formData.rol}
+    onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
+    className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors appearance-none" 
+  >
+    <option value="Vendedor">Vendedor</option>
+    <option value="Gerente">Gerente</option>
+  </select>
+</div>
               </div>
             </div>
 
