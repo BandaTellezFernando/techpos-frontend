@@ -1,28 +1,53 @@
-//src/pages/gerente/Dashboard.tsx
-import { useState, useEffect } from 'react';
-import { TrendingUp, ShoppingBag, CircleDollarSign, RefreshCw, Trophy, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { TrendingUp, ShoppingBag, CircleDollarSign, RefreshCw, Trophy, X, Package } from 'lucide-react';
 import api from '../../api/axios';
+
+interface RankingItem {
+  _id: string;
+  nombre: string;
+  cantidadTotal: number;
+  ingresoTotal: number;
+}
 
 export default function Dashboard() {
   const [dolar, setDolar] = useState<number | null>(null);
+  const [ventasHoy, setVentasHoy] = useState<number>(0);
+  const [transaccionesHoy, setTransaccionesHoy] = useState<number>(0);
+  const [ranking, setRanking] = useState<RankingItem[]>([]);
+  const [cargando, setCargando] = useState(true);
   
   // Estados para el Modal del Dólar
   const [modalAbierto, setModalAbierto] = useState(false);
   const [nuevoDolar, setNuevoDolar] = useState('');
   const [errorModal, setErrorModal] = useState('');
 
-  const cargarDolar = async () => {
+  const cargarDatosDashboard = useCallback(async () => {
     try {
-      const res = await api.get('/configuracion');
-      setDolar(res.data.configuracion.tipoCambioDolar);
+      setCargando(true);
+      
+      // 1. Cargar el Dólar
+      const resConfig = await api.get('/configuracion');
+      setDolar(resConfig.data.configuracion.tipoCambioDolar);
+
+      // 2. Cargar las Ventas de Hoy (Llamamos a cierre-caja sin pasar fechas, por defecto toma el día actual)
+      const resCierre = await api.get('/ventas/cierre-caja');
+      setVentasHoy(resCierre.data.granTotalBs);
+      setTransaccionesHoy(resCierre.data.totalTransacciones);
+
+      // 3. Cargar el Top 5 de Productos
+      const resRanking = await api.get('/ventas/ranking');
+      setRanking(resRanking.data.ranking);
+
     } catch (error) {
-      console.error("Error al cargar configuración", error);
+      console.error("Error al cargar los datos del dashboard", error);
+    } finally {
+      setCargando(false);
     }
-  };
+  }, []);
 
   useEffect(() => {
-    setTimeout(() => { cargarDolar(); }, 0);
-  }, []);
+    setTimeout(() => { cargarDatosDashboard(); }, 0);
+  }, [cargarDatosDashboard]);
 
   const abrirModalDolar = () => {
     setNuevoDolar(dolar ? dolar.toString() : '');
@@ -52,32 +77,54 @@ export default function Dashboard() {
   return (
     <div className="flex flex-col gap-6 animate-fade-in w-full h-full overflow-y-auto p-8 relative">
       
+      {/* HEADER */}
       <div className="flex justify-between items-end">
         <div>
           <h2 className="text-3xl font-bold">Dashboard</h2>
           <p className="opacity-70 mt-1 capitalize">{hoy}</p>
         </div>
+        <div className="flex items-center gap-2 bg-ruby-panelLight dark:bg-ruby-panelDark px-4 py-1.5 rounded-full border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm">
+          <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span className="text-sm font-semibold opacity-80">
+            {cargando ? 'Sincronizando...' : 'Sistema en línea'}
+          </span>
+        </div>
       </div>
 
+      {/* WIDGETS */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         
-        <div className="bg-ruby-panelLight dark:bg-ruby-panelDark p-6 rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm opacity-50">
-          <div className="flex justify-between items-start mb-4"><TrendingUp className="text-emerald-500" size={24} /></div>
-          <h3 className="text-xs font-bold opacity-60 tracking-widest uppercase">Ventas de Hoy</h3>
-          <p className="text-2xl font-black font-mono mt-1">Próximamente</p>
+        <div className="bg-ruby-panelLight dark:bg-ruby-panelDark p-6 rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-4">
+              <TrendingUp className="text-emerald-500" size={24} />
+              <span className="opacity-50 text-xs font-bold bg-black/5 dark:bg-white/5 px-2 py-1 rounded">HOY</span>
+            </div>
+            <h3 className="text-xs font-bold opacity-60 tracking-widest uppercase">Ingresos Brutos</h3>
+            <p className="text-3xl font-black font-mono mt-1 text-emerald-600 dark:text-emerald-500">
+              Bs. {ventasHoy.toFixed(2)}
+            </p>
+          </div>
         </div>
 
-        <div className="bg-ruby-panelLight dark:bg-ruby-panelDark p-6 rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm opacity-50">
-          <div className="flex justify-between items-start mb-4"><ShoppingBag className="text-blue-500" size={24} /></div>
-          <h3 className="text-xs font-bold opacity-60 tracking-widest uppercase">Transacciones</h3>
-          <p className="text-2xl font-black font-mono mt-1">Próximamente</p>
+        <div className="bg-ruby-panelLight dark:bg-ruby-panelDark p-6 rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm flex flex-col justify-between">
+          <div>
+            <div className="flex justify-between items-start mb-4">
+              <ShoppingBag className="text-blue-500" size={24} />
+              <span className="opacity-50 text-xs font-bold bg-black/5 dark:bg-white/5 px-2 py-1 rounded">HOY</span>
+            </div>
+            <h3 className="text-xs font-bold opacity-60 tracking-widest uppercase">Transacciones</h3>
+            <p className="text-3xl font-black font-mono mt-1 text-blue-600 dark:text-blue-500">
+              {transaccionesHoy}
+            </p>
+          </div>
         </div>
 
         <div className="bg-ruby-panelLight dark:bg-ruby-panelDark p-6 rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm flex flex-col justify-between border-b-4 border-b-ruby-accent">
           <div>
             <div className="flex justify-between items-start mb-4">
               <CircleDollarSign className="text-amber-500" size={24} />
-              <span className="opacity-50 text-xs font-bold bg-black/5 dark:bg-white/5 px-2 py-1 rounded">T/C MONGODB</span>
+              <span className="opacity-50 text-xs font-bold bg-black/5 dark:bg-white/5 px-2 py-1 rounded">GLOBAL</span>
             </div>
             <h3 className="text-xs font-bold opacity-60 tracking-widest uppercase">Dólar Actual</h3>
             <p className="text-4xl font-black font-mono mt-1 text-ruby-priceLight dark:text-ruby-priceDark">
@@ -90,12 +137,39 @@ export default function Dashboard() {
         </div>
       </div>
 
-      <div className="bg-ruby-panelLight dark:bg-ruby-panelDark rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm p-6 mt-2 opacity-50">
-        <h3 className="text-lg font-bold mb-6">Ranking — Productos Más Vendidos (Próximamente)</h3>
-        <div className="flex flex-col items-center py-10">
-          <Trophy size={48} className="opacity-20 mb-4" />
-          <p className="font-medium opacity-60">Aquí verás los productos reales de MongoDB</p>
+      {/* RANKING */}
+      <div className="bg-ruby-panelLight dark:bg-ruby-panelDark rounded-xl border border-ruby-textLight/10 dark:border-ruby-textDark/10 shadow-sm p-6 mt-2">
+        <div className="flex items-center gap-3 mb-6">
+          <Trophy className="text-amber-500" size={24} />
+          <h3 className="text-lg font-bold">Top 5 Productos Más Vendidos</h3>
         </div>
+        
+        {ranking.length === 0 && !cargando ? (
+          <div className="flex flex-col items-center py-10 opacity-50">
+            <Package size={48} className="mb-4 opacity-40" />
+            <p className="font-medium">No hay ventas registradas todavía.</p>
+          </div>
+        ) : (
+          <div className="space-y-4">
+            {ranking.map((item, index) => (
+              <div key={item._id} className="flex items-center justify-between p-4 bg-black/5 dark:bg-white/5 rounded-xl border border-ruby-textLight/5 dark:border-white/5 transition-colors hover:border-ruby-accent/30">
+                <div className="flex items-center gap-4">
+                  <div className={`w-8 h-8 rounded-full flex items-center justify-center font-black text-sm ${index === 0 ? 'bg-amber-500 text-white' : index === 1 ? 'bg-gray-400 text-white' : index === 2 ? 'bg-amber-700 text-white' : 'bg-ruby-textLight/10 dark:bg-white/10'}`}>
+                    {index + 1}
+                  </div>
+                  <div>
+                    <h4 className="font-bold text-base leading-none">{item.nombre}</h4>
+                    <p className="text-xs opacity-60 mt-1">{item.cantidadTotal} unidades vendidas</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <p className="text-[10px] opacity-60 tracking-widest uppercase font-bold mb-1">Ingresos</p>
+                  <p className="font-mono font-bold text-ruby-priceLight dark:text-ruby-priceDark">Bs. {item.ingresoTotal.toFixed(2)}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
       </div>
 
       {/* MODAL DEL DÓLAR */}
