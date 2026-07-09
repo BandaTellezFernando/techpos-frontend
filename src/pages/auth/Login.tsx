@@ -1,168 +1,95 @@
-import { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
-import api from '../../api/axios'; // Importamos nuestra conexión real
+import { useState } from 'react';
+import { Zap, AlertTriangle, X } from 'lucide-react';
+import api from '../../api/axios';
 
 export default function Login() {
   const [pin, setPin] = useState('');
-  const [error, setError] = useState(false);
-  const [modo, setModo] = useState<'gerencia' | 'empleado'>('gerencia');
-  
-  // Nuevo: Necesitamos el CI del gerente para el backend. 
-  // En la vida real, podrías pedirlo en un input antes del PIN.
-  // Por ahora lo dejaremos quemado con el CI de tu "seeder".
-  const ciGerente = '12345678'; 
-  
-  const navigate = useNavigate();
+  const [cargando, setCargando] = useState(false);
+  const [error, setError] = useState('');
+  const [modalInactivo, setModalInactivo] = useState(false);
 
-  useEffect(() => {
-    if (pin.length === 5) {
+  const handleLogin = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!pin.trim()) return;
+    
+    try {
+      setCargando(true);
+      setError('');
       
-      const iniciarSesion = async () => {
-        try {
-          if (modo === 'gerencia') {
-            // 1. PETICIÓN REAL AL BACKEND PARA GERENTE
-            const response = await api.post('/auth/login', {
-              ci: ciGerente,
-              pin: pin
-            });
-            
-            // Si el backend responde bien, guardamos el token y entramos
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
-            navigate('/dashboard');
-
-          } else {
-            // 2. PETICIÓN REAL AL BACKEND PARA EMPLEADO
-            // (El backend del empleado pide 'codigo', que es el PIN temporal de 6 dígitos que genera el gerente)
-            // *Nota: Tu backend espera 6 dígitos para empleado, pero tu UI del PIN tiene 5. 
-            // Quizás quieras cambiar tu generarCodigo a 5 dígitos, o el UI a 6.*
-            const response = await api.post('/auth/login-codigo', {
-              codigo: pin 
-            });
-
-            localStorage.setItem('token', response.data.token);
-            localStorage.setItem('usuario', JSON.stringify(response.data.usuario));
-            navigate('/pos');
-          }
-        } catch (error) {
-          // 1. Imprimimos el error en consola (así ESLint deja de quejarse porque ya le dimos uso a la variable)
-          console.error("Error en la autenticación:", error);
-
-          // 2. Si el backend lanza error (PIN incorrecto, cuenta desactivada...)
-          setError(true);
-          setTimeout(() => {
-            setPin('');
-            setError(false);
-          }, 500);
-        }
-      };
-
-      iniciarSesion();
-    }
-  }, [pin, navigate, modo]);
-
-
-
-  const presionarTecla = (numero: string) => {
-    if (pin.length < 5) {
-      setPin(prev => prev + numero);
-      setError(false);
+      // Llamamos a la nueva ruta unificada
+      const res = await api.post('/auth/login', { pin });
+      
+      // Guardamos la sesión
+      localStorage.setItem('token', res.data.token);
+      localStorage.setItem('rol', res.data.rol);
+      
+      // Redirigimos según el rol
+      if (res.data.rol === 'Gerente') {
+        window.location.href = '/dashboard';
+      } else {
+        window.location.href = '/pos';
+      }
+    } catch (error) {
+      // AQUÍ ESTÁ LA MAGIA DE TYPESCRIPT: Le decimos qué forma tiene el error de Axios
+      const err = error as { response?: { data?: { mensaje?: string } } };
+      
+      if (err.response?.data?.mensaje === 'INACTIVO') {
+        setModalInactivo(true); // Dispara el modal de bloqueo
+      } else {
+        setError(err.response?.data?.mensaje || 'Error al iniciar sesión');
+      }
+    } finally {
+      setCargando(false);
     }
   };
-
-  const borrarTecla = () => {
-    setPin(prev => prev.slice(0, -1));
-    setError(false);
-  };
-
-  // Botones del teclado numérico
-  const teclas = ['1', '2', '3', '4', '5', '6', '7', '8', '9'];
 
   return (
-    // Forzamos el modo oscuro por defecto para esta pantalla basándonos en tu diseño
-    <div className="dark h-screen w-full bg-[#1A1515] text-[#FEE2E2] flex flex-col items-center justify-center font-sans relative overflow-hidden selection:bg-ruby-accent/30">
+    <div className="min-h-screen bg-[#1A1414] text-white flex flex-col items-center justify-center p-4">
       
-      {/* Botón sutil para cambiar entre vista de Gerente y Empleado (Solo para desarrollo/pruebas) */}
-      <div className="absolute top-8 flex gap-4 bg-white/5 p-1 rounded-lg border border-white/10">
-        <button 
-          onClick={() => { setModo('gerencia'); setPin(''); }}
-          className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${modo === 'gerencia' ? 'bg-ruby-accent text-white' : 'opacity-50'}`}
-        >
-          Gerencia (12345)
-        </button>
-        <button 
-          onClick={() => { setModo('empleado'); setPin(''); }}
-          className={`px-4 py-1.5 rounded-md text-sm font-bold transition-colors ${modo === 'empleado' ? 'bg-ruby-accent text-white' : 'opacity-50'}`}
-        >
-          Empleado (11111)
-        </button>
+      <div className="w-16 h-16 bg-ruby-accent rounded-2xl flex items-center justify-center shadow-[0_0_30px_rgba(225,29,72,0.3)] mb-6 animate-pulse-slow">
+        <Zap size={32} fill="currentColor" />
       </div>
 
-      <div className="flex flex-col items-center w-full max-w-sm animate-fade-in">
-        
-        {/* LOGO */}
-        <div className="w-16 h-16 rounded-2xl border border-ruby-accent/30 bg-ruby-accent/10 flex items-center justify-center text-3xl mb-6 shadow-[0_0_30px_rgba(239,68,68,0.15)] text-ruby-accent">
-          ⚡
-        </div>
-
-        {/* TÍTULOS */}
-        <h1 className="text-2xl font-bold tracking-wide">Virgen de Copacabana</h1>
-        <p className="text-ruby-accent opacity-80 mt-1 mb-10 text-sm font-medium tracking-wider">
-          {modo === 'gerencia' ? 'Acceso de Gerencia' : 'Acceso de Vendedor'}
-        </p>
-
-        {/* INDICADOR DE PIN */}
-        <p className="text-xs font-bold tracking-[0.2em] opacity-60 mb-4 uppercase">PIN de Seguridad</p>
-        <div className={`flex gap-4 mb-10 transition-transform ${error ? 'animate-shake' : ''}`}>
-          {[0, 1, 2, 3, 4].map((index) => (
-            <div 
-              key={index} 
-              className={`w-12 h-12 rounded-full border-2 transition-all duration-200 ${
-                index < pin.length 
-                  ? (error ? 'bg-red-500 border-red-500 shadow-[0_0_15px_rgba(239,68,68,0.5)]' : 'bg-ruby-accent border-ruby-accent shadow-[0_0_15px_rgba(239,68,68,0.3)]')
-                  : 'border-white/10 bg-transparent'
-              }`}
-            />
-          ))}
-        </div>
-
-        {/* TECLADO NUMÉRICO */}
-        <div className="grid grid-cols-3 gap-3 w-full px-6">
-          {teclas.map((num) => (
-            <button 
-              key={num}
-              onClick={() => presionarTecla(num)}
-              className="h-16 bg-[#261C1D] border border-white/5 rounded-2xl text-2xl font-bold flex items-center justify-center active:bg-ruby-accent/20 active:border-ruby-accent/50 active:scale-95 transition-all shadow-sm"
-            >
-              {num}
-            </button>
-          ))}
-          
-          {/* Espacio vacío inferior izquierdo */}
-          <div></div>
-          
-          {/* Cero */}
-          <button 
-            onClick={() => presionarTecla('0')}
-            className="h-16 bg-[#261C1D] border border-white/5 rounded-2xl text-2xl font-bold flex items-center justify-center active:bg-ruby-accent/20 active:border-ruby-accent/50 active:scale-95 transition-all shadow-sm"
-          >
-            0
-          </button>
-          
-          {/* Botón de Borrar (Backspace) */}
-          <button 
-            onClick={borrarTecla}
-            className="h-16 bg-[#261C1D] border border-white/5 rounded-2xl text-xl opacity-70 flex items-center justify-center active:bg-white/10 active:scale-95 transition-all shadow-sm hover:opacity-100"
-          >
-            ⌫
-          </button>
-        </div>
-
-        <button className="mt-10 text-sm font-semibold opacity-60 hover:opacity-100 hover:text-ruby-accent transition-colors">
-          ¿Olvidaste tu PIN?
-        </button>
-
+      <div className="text-center mb-10">
+        <h1 className="text-3xl font-black tracking-tight mb-2">Virgen de Copacabana</h1>
+        <p className="text-ruby-accent font-bold tracking-widest text-sm uppercase">Punto de Venta</p>
       </div>
+
+      <form onSubmit={handleLogin} className="w-full max-w-xs flex flex-col gap-4">
+        <div>
+          <label className="text-xs font-bold opacity-50 tracking-widest uppercase mb-2 block text-center">Ingresa tu PIN</label>
+          <input 
+            type="password" 
+            autoFocus
+            maxLength={10}
+            value={pin}
+            onChange={(e) => setPin(e.target.value)}
+            className="w-full bg-white/5 border-2 border-white/10 rounded-2xl py-4 text-center text-3xl font-mono tracking-[0.3em] outline-none focus:border-ruby-accent transition-colors"
+          />
+        </div>
+
+        {error && <p className="text-ruby-accent text-sm font-bold text-center">{error}</p>}
+
+        <button 
+          disabled={cargando || pin.length < 5}
+          className="w-full bg-ruby-accent text-white py-4 rounded-xl font-bold text-lg shadow-lg shadow-ruby-accent/20 hover:bg-ruby-accent/90 active:scale-95 transition-all mt-4 disabled:opacity-50 disabled:shadow-none"
+        >
+          {cargando ? 'Verificando...' : 'Iniciar Sesión'}
+        </button>
+      </form>
+
+      {/* MODAL EMPLEADO INACTIVO */}
+      {modalInactivo && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 animate-fade-in">
+          <div className="bg-[#261C1D] w-full max-w-sm rounded-2xl shadow-2xl p-6 border border-ruby-accent/30 text-center relative">
+            <button onClick={() => setModalInactivo(false)} className="absolute top-4 right-4 opacity-50 hover:opacity-100"><X size={24} /></button>
+            <AlertTriangle size={48} className="text-amber-500 mx-auto mb-4" />
+            <h3 className="font-bold text-xl mb-2">Acceso Denegado</h3>
+            <p className="opacity-70 text-sm mb-6">Tu usuario se encuentra actualmente desactivado. Por favor, comunícate con la Gerencia para restaurar tu acceso al sistema.</p>
+            <button onClick={() => setModalInactivo(false)} className="w-full bg-white/10 hover:bg-white/20 py-3 rounded-xl font-bold transition-colors">Entendido</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

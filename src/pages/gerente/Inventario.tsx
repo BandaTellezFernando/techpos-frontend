@@ -22,6 +22,9 @@ export default function Inventario() {
   const [modalAbierto, setModalAbierto] = useState(false);
   const [toast, setToast] = useState<{mensaje: string, tipo: 'exito' | 'error'} | null>(null);
 
+  // NUEVO: ESTADO PARA LOS BOTONES DE FILTRO
+  const [tabFiltro, setTabFiltro] = useState<'Celular' | 'Accesorio'>('Celular');
+
   const [tipoProdModal, setTipoProdModal] = useState<'Celular' | 'Accesorio'>('Celular');
   const [formData, setFormData] = useState({
     nombre: '', marca: '', categoria: 'General', precioBase: '', monedaBase: 'USD',
@@ -39,7 +42,7 @@ export default function Inventario() {
       const response = await api.get('/productos');
       setProductos(response.data.productos);
     } catch (error) {
-      console.error(error); // Evita el error de "error is defined but never used"
+      console.error(error); 
       mostrarNotificacion('Error al cargar inventario', 'error');
     } finally {
       setCargando(false);
@@ -52,8 +55,6 @@ export default function Inventario() {
 
   const guardarProducto = async () => {
     try {
-      // Reemplazamos el 'any' con Record para decirle a TypeScript que 
-      // este objeto contendrá propiedades con valores string o number
       const payload: Record<string, string | number> = {
         nombre: formData.nombre,
         marca: formData.marca,
@@ -93,7 +94,7 @@ export default function Inventario() {
   const totalAccesorios = productos.filter(p => p.tipoProducto === 'Accesorio').length;
 
   return (
-    <div className="flex flex-col h-full animate-fade-in p-8 w-full relative overflow-hidden">
+    <div className="flex flex-col h-full animate-fade-in p-4 md:p-8 w-full relative overflow-hidden">
       
       {toast && (
         <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl font-bold text-sm animate-fade-in ${toast.tipo === 'error' ? 'bg-ruby-accent text-white' : 'bg-emerald-500 text-white'}`}>
@@ -104,21 +105,28 @@ export default function Inventario() {
 
       <div className="flex justify-between items-start mb-6">
         <div>
-          <h2 className="text-3xl font-bold">Inventario</h2>
-          <p className="opacity-70 mt-1">{productos.length} productos registrados {cargando && '(Cargando...)'}</p>
+          <h2 className="text-2xl md:text-3xl font-bold">Inventario</h2>
+          <p className="opacity-70 mt-1 text-sm md:text-base">{productos.length} productos registrados {cargando && '(Cargando...)'}</p>
         </div>
-        <button onClick={() => setModalAbierto(true)} className="bg-ruby-accent text-white px-5 py-2.5 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-ruby-accent/20">
-          <Plus size={18} /> Nuevo Producto
+        <button onClick={() => setModalAbierto(true)} className="bg-ruby-accent text-white px-4 md:px-5 py-2 md:py-2.5 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-lg shadow-ruby-accent/20">
+          <Plus size={18} /> <span className="hidden sm:block">Nuevo Producto</span>
         </button>
       </div>
 
-      <div className="flex gap-4 mb-6">
-        <div className="flex bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 rounded-xl p-1">
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold bg-ruby-textLight/5 dark:bg-white/5 border border-ruby-textLight/10 dark:border-ruby-textDark/10">
+      {/* BOTONES FUNCIONALES (Conectados al Estado) */}
+      <div className="flex flex-col sm:flex-row gap-4 mb-6">
+        <div className="flex bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 rounded-xl p-1 overflow-x-auto hide-scrollbar">
+          <button 
+            onClick={() => setTabFiltro('Celular')} 
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold whitespace-nowrap transition-all ${tabFiltro === 'Celular' ? 'bg-ruby-textLight/5 dark:bg-white/5 border border-ruby-textLight/10 dark:border-ruby-textDark/10' : 'opacity-60 hover:opacity-100'}`}
+          >
             <Smartphone size={18} /> Celulares <span className="text-xs bg-ruby-textLight/10 dark:bg-ruby-textDark/10 px-2 py-0.5 rounded opacity-70">{totalCelulares}</span>
           </button>
-          <button className="flex items-center gap-2 px-4 py-2 rounded-lg font-bold opacity-60">
-            <Headphones size={18} /> Accesorios <span className="text-xs px-2 py-0.5 rounded border border-transparent">{totalAccesorios}</span>
+          <button 
+            onClick={() => setTabFiltro('Accesorio')} 
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-bold whitespace-nowrap transition-all ${tabFiltro === 'Accesorio' ? 'bg-ruby-textLight/5 dark:bg-white/5 border border-ruby-textLight/10 dark:border-ruby-textDark/10' : 'opacity-60 hover:opacity-100'}`}
+          >
+            <Headphones size={18} /> Accesorios <span className="text-xs px-2 py-0.5 rounded opacity-70 bg-black/5 dark:bg-white/5">{totalAccesorios}</span>
           </button>
         </div>
         <div className="flex-1 relative">
@@ -127,7 +135,39 @@ export default function Inventario() {
         </div>
       </div>
 
-      <div className="flex-1 overflow-auto bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 rounded-2xl shadow-sm relative">
+      {/* VISTA MÓVIL: TARJETAS (Cards) */}
+      <div className="md:hidden flex-1 overflow-y-auto space-y-4 pb-10">
+        {productos.filter(p => p.tipoProducto === tabFiltro).map(p => (
+          <div key={p._id} className="bg-ruby-panelLight dark:bg-ruby-panelDark p-4 rounded-xl border border-ruby-textLight/10 dark:border-white/5 shadow-sm">
+            <div className="flex justify-between items-start mb-2">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center opacity-70">
+                  {p.tipoProducto === 'Celular' ? <Smartphone size={18} /> : <Headphones size={18} />}
+                </div>
+                <div>
+                  <h4 className="font-bold leading-tight text-base">{p.nombre}</h4>
+                  <p className="text-[10px] opacity-60 uppercase font-bold tracking-widest mt-1">{p.marca}</p>
+                </div>
+              </div>
+              <span className={`px-2 py-1 rounded-full text-[10px] font-bold ${p.stock <= 2 ? 'bg-ruby-accent/10 text-ruby-accent' : 'bg-black/5 dark:bg-white/10'}`}>
+                Stock: {p.stock}
+              </span>
+            </div>
+            <div className="flex justify-between items-end mt-4 pt-3 border-t border-ruby-textLight/10 dark:border-white/5">
+              <div>
+                <p className="text-xs font-mono font-bold opacity-60 bg-black/5 dark:bg-white/5 px-2 py-1 rounded mb-1 w-max">
+                  {p.tipoProducto === 'Celular' ? `${p.ram} / ${p.almacenamiento}` : 'Accesorio'}
+                </p>
+                <p className="text-[10px] font-mono opacity-50">{p.precioBase} {p.monedaBase}</p>
+              </div>
+              <p className="font-mono font-black text-emerald-600 dark:text-emerald-500 text-lg">Bs. {p.precioFinalBob.toFixed(2)}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* VISTA ESCRITORIO: TABLA */}
+      <div className="hidden md:block flex-1 overflow-auto bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 rounded-2xl shadow-sm relative">
         <table className="w-full text-left border-collapse min-w-[900px]">
           <thead>
             <tr className="border-b border-ruby-textLight/10 dark:border-ruby-textDark/10 text-xs opacity-60 tracking-widest uppercase sticky top-0 bg-ruby-panelLight dark:bg-ruby-panelDark z-10">
@@ -140,7 +180,7 @@ export default function Inventario() {
             </tr>
           </thead>
           <tbody className="divide-y divide-ruby-textLight/5 dark:divide-ruby-textDark/5">
-            {productos.map(p => (
+            {productos.filter(p => p.tipoProducto === tabFiltro).map(p => (
               <tr key={p._id} className="hover:bg-black/5 dark:hover:bg-white/5 transition-colors">
                 <td className="p-5">
                   <div className="flex items-center gap-3">
@@ -166,7 +206,7 @@ export default function Inventario() {
       </div>
 
       {modalAbierto && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm animate-fade-in p-4">
           <div className="bg-ruby-bgLight dark:bg-ruby-bgDark w-full max-w-2xl rounded-2xl shadow-2xl overflow-hidden border border-ruby-textLight/10 dark:border-white/10 flex flex-col max-h-[90vh]">
             <div className="flex justify-between items-center p-6 border-b border-ruby-textLight/10 dark:border-white/5 bg-ruby-panelLight dark:bg-ruby-panelDark shrink-0">
               <h3 className="font-bold text-xl">Crear Producto</h3>
@@ -175,53 +215,53 @@ export default function Inventario() {
             
             <div className="overflow-y-auto p-6 space-y-4">
               <div className="flex gap-2 mb-2">
-                <button onClick={() => setTipoProdModal('Celular')} className={`flex-1 py-2 rounded-lg font-bold border transition-colors ${tipoProdModal === 'Celular' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'opacity-50'}`}>Celular</button>
-                <button onClick={() => setTipoProdModal('Accesorio')} className={`flex-1 py-2 rounded-lg font-bold border transition-colors ${tipoProdModal === 'Accesorio' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'opacity-50'}`}>Accesorio</button>
+                <button onClick={() => setTipoProdModal('Celular')} className={`flex-1 py-3 md:py-2 rounded-lg font-bold border transition-colors ${tipoProdModal === 'Celular' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'opacity-50'}`}>Celular</button>
+                <button onClick={() => setTipoProdModal('Accesorio')} className={`flex-1 py-3 md:py-2 rounded-lg font-bold border transition-colors ${tipoProdModal === 'Accesorio' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'opacity-50'}`}>Accesorio</button>
               </div>
 
-              <div className="grid grid-cols-2 gap-4">
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <div>
                   <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Nombre</label>
-                  <input type="text" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none" />
+                  <input type="text" value={formData.nombre} onChange={e => setFormData({...formData, nombre: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Marca</label>
-                  <input type="text" value={formData.marca} onChange={e => setFormData({...formData, marca: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none" />
+                  <input type="text" value={formData.marca} onChange={e => setFormData({...formData, marca: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Precio Base</label>
-                  <input type="number" value={formData.precioBase} onChange={e => setFormData({...formData, precioBase: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none" />
+                  <input type="number" value={formData.precioBase} onChange={e => setFormData({...formData, precioBase: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none" />
                 </div>
                 <div>
                   <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Moneda</label>
-                  <select value={formData.monedaBase} onChange={e => setFormData({...formData, monedaBase: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none">
+                  <select value={formData.monedaBase} onChange={e => setFormData({...formData, monedaBase: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none appearance-none">
                     <option value="USD">Dólares (USD)</option>
                     <option value="BOB">Bolivianos (BOB)</option>
                   </select>
                 </div>
-                <div>
+                <div className="md:col-span-2">
                   <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Stock Inicial</label>
-                  <input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none" />
+                  <input type="number" value={formData.stock} onChange={e => setFormData({...formData, stock: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none" />
                 </div>
               </div>
 
               {tipoProdModal === 'Celular' && (
-                <div className="grid grid-cols-2 gap-4 mt-4 p-4 border border-ruby-textLight/10 dark:border-white/5 rounded-xl bg-black/5 dark:bg-white/5">
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mt-4 p-4 border border-ruby-textLight/10 dark:border-white/5 rounded-xl bg-black/5 dark:bg-white/5">
                   <div>
                     <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Memoria RAM</label>
-                    <input type="text" placeholder="Ej. 8 GB" value={formData.ram} onChange={e => setFormData({...formData, ram: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none" />
+                    <input type="text" placeholder="Ej. 8 GB" value={formData.ram} onChange={e => setFormData({...formData, ram: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none" />
                   </div>
                   <div>
                     <label className="text-[10px] font-bold opacity-50 uppercase block mb-1">Almacenamiento</label>
-                    <input type="text" placeholder="Ej. 256 GB" value={formData.almacenamiento} onChange={e => setFormData({...formData, almacenamiento: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-2 px-3 outline-none" />
+                    <input type="text" placeholder="Ej. 256 GB" value={formData.almacenamiento} onChange={e => setFormData({...formData, almacenamiento: e.target.value})} className="w-full bg-ruby-panelLight dark:bg-black/20 border border-ruby-textLight/10 dark:border-white/10 rounded-xl py-3 md:py-2 px-3 outline-none" />
                   </div>
                 </div>
               )}
             </div>
 
-            <div className="flex gap-3 p-6 border-t border-ruby-textLight/10 dark:border-white/5 bg-ruby-panelLight dark:bg-ruby-panelDark shrink-0">
-              <button onClick={() => setModalAbierto(false)} className="flex-1 py-3 rounded-xl font-bold border border-ruby-textLight/20 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5">Cancelar</button>
-              <button onClick={guardarProducto} className="flex-1 py-3 rounded-xl font-bold bg-ruby-accent text-white hover:opacity-90">Guardar Producto</button>
+            <div className="flex flex-col md:flex-row gap-3 p-4 md:p-6 border-t border-ruby-textLight/10 dark:border-white/5 bg-ruby-panelLight dark:bg-ruby-panelDark shrink-0">
+              <button onClick={() => setModalAbierto(false)} className="flex-1 py-4 md:py-3 rounded-xl font-bold border border-ruby-textLight/20 dark:border-white/10 hover:bg-black/5 dark:hover:bg-white/5">Cancelar</button>
+              <button onClick={guardarProducto} className="flex-1 py-4 md:py-3 rounded-xl font-bold bg-ruby-accent text-white hover:opacity-90">Guardar Producto</button>
             </div>
           </div>
         </div>

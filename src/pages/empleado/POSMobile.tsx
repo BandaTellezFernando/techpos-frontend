@@ -1,8 +1,9 @@
-//Src/pages/empleado/POSMobile.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore, type Producto } from '../../store/cartStore';
 import { Search, Smartphone, Headphones, ShoppingCart, ChevronLeft, CreditCard, Banknote, QrCode, X, Edit3, AlertTriangle, ScanLine, CheckCircle2 } from 'lucide-react';
 import api from '../../api/axios';
+import { generarTicketPDF } from '../../utils/pdfGenerator';
+import ScannerModal from '../../components/ScannerModal';
 
 interface ProductoAPI {
   _id: string;
@@ -21,6 +22,8 @@ export default function POSMobile() {
   const [vistaActual, setVistaActual] = useState<'catalogo' | 'checkout'>('catalogo');
   const [metodoPago, setMetodoPago] = useState<'efectivo' | 'qr' | null>(null);
   
+  const [scannerAbierto, setScannerAbierto] = useState<{ idItem: string, campo: 'imei1' | 'imei2' } | null>(null);
+
   const [productos, setProductos] = useState<Producto[]>([]);
   const [cargando, setCargando] = useState(true);
   const [procesandoVenta, setProcesandoVenta] = useState(false);
@@ -81,6 +84,9 @@ export default function POSMobile() {
         clienteInfo: 'Cliente Móvil' 
       });
 
+      const numeroDeTicket = "V-" + Date.now().toString().slice(-4);
+      generarTicketPDF(numeroDeTicket, carrito, totalVenta, metodoPago === 'qr' ? 'QR' : 'Efectivo');
+
       mostrarNotificacion('¡Venta registrada con éxito!', 'exito');
       limpiarCarrito();
       setVistaActual('catalogo');
@@ -110,16 +116,16 @@ export default function POSMobile() {
         <div className="flex-1 flex flex-col overflow-hidden pt-4 px-4 pb-32">
           
           <div className="flex gap-2 overflow-x-auto pb-4 mb-2 snap-x hide-scrollbar mt-2">
-            <button onClick={() => setTabActiva('smartphones')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold border transition-colors flex items-center gap-2 ${tabActiva === 'smartphones' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
+            <button onClick={() => setTabActiva('smartphones')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${tabActiva === 'smartphones' ? 'border-2 border-ruby-accent text-ruby-accent bg-ruby-accent/10 shadow-[0_0_15px_rgba(225,29,72,0.15)]' : 'border border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
               <Smartphone size={18} /> Smartphones 
             </button>
-            <button onClick={() => setTabActiva('accesorios')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold border transition-colors flex items-center gap-2 ${tabActiva === 'accesorios' ? 'bg-ruby-accent/10 border-ruby-accent text-ruby-accent' : 'border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
+            <button onClick={() => setTabActiva('accesorios')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${tabActiva === 'accesorios' ? 'border-2 border-ruby-accent text-ruby-accent bg-ruby-accent/10 shadow-[0_0_15px_rgba(225,29,72,0.15)]' : 'border border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
               <Headphones size={18} /> Accesorios 
             </button>
           </div>
 
           <div className="relative mb-6">
-            <input type="text" placeholder="Buscar celular..." className="w-full bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/20 dark:border-ruby-textDark/20 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-ruby-accent transition-colors shadow-sm" />
+            <input type="text" placeholder="Buscar producto..." className="w-full bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/20 dark:border-ruby-textDark/20 rounded-xl py-4 pl-12 pr-4 outline-none focus:border-ruby-accent transition-colors shadow-sm" />
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 opacity-50" size={20} />
           </div>
 
@@ -128,12 +134,10 @@ export default function POSMobile() {
               <p className="text-center opacity-50 font-bold mt-10">Cargando inventario...</p>
             ) : (
               <div className="grid grid-cols-2 gap-4 pb-6">
-                {/* AQUI ESTA LA CORRECCION: Usamos 'productos' en lugar de PRODUCTOS_DEMO */}
                 {productos.filter(p => tabActiva === 'smartphones' ? p.requiereImei : !p.requiereImei).map((producto) => {
                   const stockActual = producto.stock ?? 0;
-
                   return (
-                    <div key={producto.id} onClick={() => stockActual > 0 && agregarProducto(producto)} className={`bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 p-4 rounded-2xl flex flex-col justify-between transition-colors shadow-sm ${stockActual > 0 ? 'active:border-ruby-accent active:bg-ruby-accent/5 cursor-pointer select-none' : 'opacity-40 grayscale cursor-not-allowed'}`}>
+                    <div key={producto.id} onClick={() => stockActual > 0 && agregarProducto(producto)} className={`bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 p-4 rounded-2xl flex flex-col justify-between transition-colors shadow-sm ${stockActual > 0 ? 'active:border-ruby-accent active:bg-ruby-accent/5 cursor-pointer select-none hover:border-ruby-accent/30' : 'opacity-40 grayscale cursor-not-allowed'}`}>
                       <div>
                         <div className="flex justify-between items-start mb-3">
                           <div className="w-8 h-8 rounded-lg bg-black/5 dark:bg-white/5 flex items-center justify-center text-sm border border-black/5 dark:border-white/5">
@@ -152,7 +156,7 @@ export default function POSMobile() {
                       </div>
                       <div className="mt-2 flex justify-between items-end border-t border-ruby-textLight/10 dark:border-white/5 pt-3">
                         <p className="text-ruby-priceLight dark:text-ruby-priceDark font-mono text-sm font-bold">Bs. {producto.precioBase}</p>
-                        <span className="text-ruby-accent font-light text-xl leading-none">+</span>
+                        <button className="text-lg font-black text-white bg-ruby-accent w-8 h-8 flex items-center justify-center rounded-lg shadow-[0_4px_15px_rgba(225,29,72,0.4)] pointer-events-none">+</button>
                       </div>
                     </div>
                   );
@@ -209,8 +213,15 @@ export default function POSMobile() {
           {carrito.map((item) => {
             const imeiLleno = item.imei1 && item.imei1.trim() !== '';
             return (
-              <div key={item.id} className="bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-white/5 rounded-2xl p-4 shadow-sm relative transition-colors">
-                <button onClick={() => eliminarProducto(item.id)} className="absolute top-4 right-4 opacity-50 hover:opacity-100"><X size={20} /></button>
+              <div key={item.cartItemId} className="bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-white/5 rounded-2xl p-4 shadow-sm relative transition-colors">
+                
+                <button 
+                  onClick={() => eliminarProducto(item.cartItemId)} 
+                  className="absolute top-4 right-4 w-8 h-8 flex items-center justify-center rounded-full bg-ruby-accent/10 text-ruby-accent hover:bg-ruby-accent hover:text-white transition-all shadow-[0_0_10px_rgba(225,29,72,0.2)] hover:shadow-[0_4px_15px_rgba(225,29,72,0.4)]"
+                >
+                  <X size={16} strokeWidth={3} />
+                </button>
+
                 <div className="flex items-center gap-3 mb-4 pr-10">
                   <div className="w-10 h-10 rounded-lg bg-ruby-accent/10 text-ruby-accent flex items-center justify-center border border-ruby-accent/20">
                     {item.requiereImei ? <Smartphone size={20} /> : <Headphones size={20} />}
@@ -225,9 +236,9 @@ export default function POSMobile() {
                   <div className="flex justify-between items-center mb-4 pb-4 border-b border-ruby-textLight/10 dark:border-white/5">
                     <span className="text-[10px] opacity-50 uppercase font-bold">Cantidad</span>
                     <div className="flex items-center gap-3 bg-ruby-bgLight dark:bg-ruby-bgDark px-3 py-1.5 rounded-lg border border-ruby-textLight/10 dark:border-white/10">
-                      <button onClick={() => actualizarCantidad(item.id, item.cantidad - 1)} className="opacity-50 font-bold px-2">—</button>
+                      <button onClick={() => actualizarCantidad(item.cartItemId, item.cantidad - 1)} className="opacity-50 font-bold px-2">—</button>
                       <span className="font-bold text-sm w-4 text-center">{item.cantidad}</span>
-                      <button onClick={() => actualizarCantidad(item.id, item.cantidad + 1)} className="opacity-50 font-bold px-2">+</button>
+                      <button onClick={() => actualizarCantidad(item.cartItemId, item.cantidad + 1)} className="opacity-50 font-bold px-2">+</button>
                     </div>
                   </div>
                 )}
@@ -236,7 +247,7 @@ export default function POSMobile() {
                   <span className="text-[10px] opacity-50 uppercase font-bold">Precio Final</span>
                   <div className="flex items-center gap-2 group bg-ruby-bgLight dark:bg-ruby-bgDark px-3 py-1.5 rounded-lg border border-ruby-textLight/10 dark:border-white/10">
                     <Edit3 className="opacity-50" size={12} />
-                    <input type="number" value={item.precioFinal} onChange={(e) => actualizarPrecioFinal(item.id, Number(e.target.value))} className="w-20 text-right bg-transparent outline-none font-mono font-bold text-ruby-priceLight dark:text-ruby-priceDark" />
+                    <input type="number" value={item.precioFinal} onChange={(e) => actualizarPrecioFinal(item.cartItemId, Number(e.target.value))} className="w-20 text-right bg-transparent outline-none font-mono font-bold text-ruby-priceLight dark:text-ruby-priceDark" />
                   </div>
                 </div>
 
@@ -248,9 +259,9 @@ export default function POSMobile() {
                     <div className="flex gap-2">
                       <div className="relative flex-1">
                         <span className="absolute left-4 top-1/2 -translate-y-1/2 opacity-30 text-xs font-bold">[ ]</span>
-                        <input type="text" placeholder="IMEI 1" value={item.imei1 || ''} onChange={(e) => actualizarImei(item.id, e.target.value, item.imei2)} className={`w-full bg-ruby-bgLight dark:bg-ruby-bgDark border rounded-xl py-3 pl-10 pr-4 text-xs font-mono outline-none ${imeiLleno ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-500 focus:border-emerald-500' : 'border-ruby-accent/50 text-ruby-accent focus:border-ruby-accent'}`} />
+                        <input type="text" placeholder="IMEI 1" value={item.imei1 || ''} onChange={(e) => actualizarImei(item.cartItemId, e.target.value, item.imei2)} className={`w-full bg-ruby-bgLight dark:bg-ruby-bgDark border rounded-xl py-3 pl-10 pr-4 text-xs font-mono outline-none ${imeiLleno ? 'border-emerald-500/50 text-emerald-600 dark:text-emerald-500 focus:border-emerald-500' : 'border-ruby-accent/50 text-ruby-accent focus:border-ruby-accent'}`} />
                       </div>
-                      <button className="bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl w-14 flex items-center justify-center opacity-70"><ScanLine size={20} /></button>
+                      <button onClick={() => setScannerAbierto({ idItem: item.cartItemId, campo: 'imei1' })} className="bg-ruby-bgLight dark:bg-ruby-bgDark border border-ruby-textLight/10 dark:border-white/10 rounded-xl w-14 flex items-center justify-center opacity-70"><ScanLine size={20} /></button>
                     </div>
                   </div>
                 )}
@@ -281,6 +292,23 @@ export default function POSMobile() {
           </button>
         )}
       </div>
+
+      {scannerAbierto && (
+        <ScannerModal 
+          onClose={() => setScannerAbierto(null)} 
+          onScan={(texto) => {
+            const itemEnCarrito = carrito.find(i => i.cartItemId === scannerAbierto.idItem);
+            if (itemEnCarrito) {
+              actualizarImei(
+                scannerAbierto.idItem, 
+                scannerAbierto.campo === 'imei1' ? texto : (itemEnCarrito.imei1 || ''), 
+                scannerAbierto.campo === 'imei2' ? texto : (itemEnCarrito.imei2 || '')
+              );
+            }
+            setScannerAbierto(null);
+          }} 
+        />
+      )}
     </div>
   );
 }

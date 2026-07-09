@@ -1,9 +1,9 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
-// 1. Importamos los íconos
-import { Zap, LayoutDashboard, ShoppingBag, Package, LineChart, Users, Sun, Moon, LogOut } from 'lucide-react';
+import { Zap, LayoutDashboard, ShoppingBag, Package, LineChart, Users, Sun, Moon, LogOut, X } from 'lucide-react';
+import { cerrarSesion } from '../../utils/pdfGenerator'; // <-- IMPORTAMOS LA FUNCIÓN
 
-export default function SidebarGerente() {
+export default function SidebarGerente({ onClose }: { onClose?: () => void }) {
   const [modoOscuro, setModoOscuro] = useState(true);
 
   useEffect(() => {
@@ -22,45 +22,34 @@ export default function SidebarGerente() {
     }`;
 
   return (
-    <aside className="w-64 h-screen bg-ruby-panelLight dark:bg-ruby-panelDark border-r border-ruby-textLight/10 dark:border-ruby-textDark/10 flex flex-col justify-between transition-colors duration-300">
+    <aside className="w-64 h-full bg-ruby-panelLight dark:bg-ruby-panelDark border-r border-ruby-textLight/10 dark:border-ruby-textDark/10 flex flex-col justify-between transition-colors duration-300">
       
       <div>
-        <div className="p-6 flex items-center gap-3 border-b border-ruby-textLight/5 dark:border-ruby-textDark/5">
-          <div className="w-10 h-10 bg-ruby-accent rounded-lg flex items-center justify-center text-white">
-            {/* Ícono de Rayo */}
-            <Zap size={24} fill="currentColor" />
+        <div className="p-6 flex items-center justify-between border-b border-ruby-textLight/5 dark:border-ruby-textDark/5">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 bg-ruby-accent rounded-lg flex items-center justify-center text-white">
+              <Zap size={24} fill="currentColor" />
+            </div>
+            <div>
+              <h1 className="font-bold text-sm leading-tight">Virgen de<br/>Copacabana</h1>
+              <p className="text-[10px] text-ruby-accent tracking-widest mt-1">GERENCIA</p>
+            </div>
           </div>
-          <div>
-            <h1 className="font-bold text-sm leading-tight">Virgen de<br/>Copacabana</h1>
-            <p className="text-[10px] text-ruby-accent tracking-widest mt-1">GERENCIA</p>
-          </div>
+          <button onClick={onClose} className="md:hidden p-2 opacity-50 hover:opacity-100">
+            <X size={20} />
+          </button>
         </div>
 
         <nav className="p-4 space-y-2 mt-2">
-          <NavLink to="/dashboard" className={clasesEnlace}>
-            <LayoutDashboard size={20} /> Dashboard
-          </NavLink>
-          
-          <NavLink to="/vender" className={clasesEnlace}>
-            <ShoppingBag size={20} /> Vender
-          </NavLink>
-          
-          <NavLink to="/inventario" className={clasesEnlace}>
-            <Package size={20} /> Inventario
-          </NavLink>
-          
-          <NavLink to="/reportes" className={clasesEnlace}>
-            <LineChart size={20} /> Reportes
-          </NavLink>
-          
-          <NavLink to="/empleados" className={clasesEnlace}>
-            <Users size={20} /> Empleados
-          </NavLink>
+          <NavLink to="/dashboard" onClick={onClose} className={clasesEnlace}><LayoutDashboard size={20} /> Dashboard</NavLink>
+          <NavLink to="/vender" onClick={onClose} className={clasesEnlace}><ShoppingBag size={20} /> Vender</NavLink>
+          <NavLink to="/inventario" onClick={onClose} className={clasesEnlace}><Package size={20} /> Inventario</NavLink>
+          <NavLink to="/reportes" onClick={onClose} className={clasesEnlace}><LineChart size={20} /> Reportes</NavLink>
+          <NavLink to="/empleados" onClick={onClose} className={clasesEnlace}><Users size={20} /> Empleados</NavLink>
         </nav>
       </div>
 
       <div className="p-4 border-t border-ruby-textLight/10 dark:border-ruby-textDark/10">
-        
         <div className="flex items-center gap-3 mb-6 p-2">
           <div className="w-10 h-10 rounded-full bg-ruby-accent/20 text-ruby-accent flex items-center justify-center font-bold border border-ruby-accent/30">
             GM
@@ -79,15 +68,14 @@ export default function SidebarGerente() {
             <div className={`bg-white w-5 h-5 rounded-full shadow-md transform transition-transform ${modoOscuro ? 'translate-x-7' : 'translate-x-0'}`}></div>
           </div>
           <span className="text-sm font-semibold opacity-70 flex items-center gap-2">
-            {/* Íconos de Sol y Luna */}
-            {modoOscuro ? <><Moon size={16} /> Modo Oscuro</> : <><Sun size={16} /> Modo Claro</>}
+            {modoOscuro ? <><Moon size={16} /> Oscuro</> : <><Sun size={16} /> Claro</>}
           </span>
         </div>
 
-        <button className="w-full flex items-center gap-3 p-2 text-sm font-bold opacity-70 hover:opacity-100 hover:text-ruby-accent transition-colors">
+        {/* <-- AQUÍ ESTÁ APLICADO EL CERRAR SESIÓN --> */}
+        <button onClick={cerrarSesion} className="w-full flex items-center gap-3 p-2 text-sm font-bold opacity-70 hover:opacity-100 hover:text-ruby-accent transition-colors">
           <LogOut size={20} /> Cerrar Sesión
         </button>
-
       </div>
     </aside>
   );
