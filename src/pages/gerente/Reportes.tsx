@@ -1,3 +1,4 @@
+//src/pages/gerente/Reportes.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Calendar, Filter, FileDown, Banknote, QrCode, CreditCard, CheckCircle2 } from 'lucide-react';
 import api from '../../api/axios';

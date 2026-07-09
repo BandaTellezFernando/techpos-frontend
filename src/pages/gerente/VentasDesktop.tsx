@@ -1,3 +1,4 @@
+//src/pages/gerente/VentasDesktop.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore, type Producto } from '../../store/cartStore';
 import { Smartphone, Headphones, Receipt, ShoppingCart, Edit3, X, Search, ChevronLeft, User, Banknote, QrCode, CreditCard, AlertTriangle, ScanLine, CheckCircle2 } from 'lucide-react';

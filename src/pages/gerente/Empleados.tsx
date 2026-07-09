@@ -1,3 +1,4 @@
+//src/pages/gerente/Empleados.tsx
 import { useState, useEffect } from 'react';
 import { Plus, Edit3, Hash, X } from 'lucide-react';
 import api from '../../api/axios'; 

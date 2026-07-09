@@ -1,3 +1,4 @@
+//src/pages/gerente/Inventario.tsx
 import { useState, useEffect, useCallback } from 'react';
 import { Smartphone, Headphones, Search, Plus, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import api from '../../api/axios';

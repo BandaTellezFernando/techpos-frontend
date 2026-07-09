@@ -1,3 +1,4 @@
+//src/pages/gerente/Dashboard.tsx
 import { useState, useEffect } from 'react';
 import { TrendingUp, ShoppingBag, CircleDollarSign, RefreshCw, Trophy, X } from 'lucide-react';
 import api from '../../api/axios';

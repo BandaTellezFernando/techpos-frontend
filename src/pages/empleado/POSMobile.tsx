@@ -1,3 +1,4 @@
+//Src/pages/empleado/POSMobile.tsx
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore, type Producto } from '../../store/cartStore';
 import { Search, Smartphone, Headphones, ShoppingCart, ChevronLeft, CreditCard, Banknote, QrCode, X, Edit3, AlertTriangle, ScanLine, CheckCircle2 } from 'lucide-react';
@@ -25,7 +26,6 @@ export default function POSMobile() {
   const [procesandoVenta, setProcesandoVenta] = useState(false);
   const [toast, setToast] = useState<{mensaje: string, tipo: 'exito' | 'error'} | null>(null);
 
-  // CERROJO DE SEGURIDAD (Evita peticiones dobles)
   const peticionEnCurso = useRef(false);
 
   const { carrito, totalVenta, agregarProducto, eliminarProducto, actualizarImei, actualizarPrecioFinal, actualizarCantidad, limpiarCarrito } = useCartStore();
@@ -59,11 +59,10 @@ export default function POSMobile() {
   }, [cargarInventario]);
 
   const confirmarVenta = async () => {
-    // Si la petición ya está en curso, ignoramos los clics extra silenciosamente
     if (!metodoPago || peticionEnCurso.current) return;
 
     try {
-      peticionEnCurso.current = true; // Cerramos la puerta
+      peticionEnCurso.current = true;
       setProcesandoVenta(true);
       
       const detalle = carrito.map(item => ({
@@ -93,11 +92,10 @@ export default function POSMobile() {
       mostrarNotificacion(err.response?.data?.mensaje || 'Error al confirmar la venta.', 'error');
     } finally {
       setProcesandoVenta(false);
-      peticionEnCurso.current = false; // Abrimos la puerta de nuevo
+      peticionEnCurso.current = false;
     }
   };
 
-  // Convertimos el Toast en una variable JSX normal para evitar el error del linter
   const toastElement = toast ? (
     <div className={`fixed top-4 left-4 right-4 z-[100] flex items-center gap-3 px-5 py-3 rounded-xl shadow-2xl font-bold text-sm animate-fade-in ${toast.tipo === 'error' ? 'bg-ruby-accent text-white' : 'bg-emerald-500 text-white'}`}>
       {toast.tipo === 'error' ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
@@ -130,8 +128,8 @@ export default function POSMobile() {
               <p className="text-center opacity-50 font-bold mt-10">Cargando inventario...</p>
             ) : (
               <div className="grid grid-cols-2 gap-4 pb-6">
+                {/* AQUI ESTA LA CORRECCION: Usamos 'productos' en lugar de PRODUCTOS_DEMO */}
                 {productos.filter(p => tabActiva === 'smartphones' ? p.requiereImei : !p.requiereImei).map((producto) => {
-                  // Prevenimos el error "possibly undefined" de TypeScript asignando 0
                   const stockActual = producto.stock ?? 0;
 
                   return (
@@ -164,7 +162,6 @@ export default function POSMobile() {
           </div>
         </div>
 
-        {/* Panel inferior Carrito */}
         <div className="absolute bottom-0 w-full bg-ruby-panelLight dark:bg-ruby-panelDark rounded-t-3xl border-t border-ruby-textLight/10 dark:border-ruby-textDark/10 z-30 p-5 shadow-[0_-20px_40px_rgba(0,0,0,0.1)] transition-colors">
           {carrito.length === 0 ? (
             <div className="flex flex-col items-center justify-center py-4">
@@ -195,7 +192,6 @@ export default function POSMobile() {
     );
   }
 
-  // VISTA CHECKOUT MOBILE
   return (
     <div className="flex flex-col h-full animate-fade-in w-full bg-ruby-bgLight dark:bg-ruby-bgDark relative z-50 transition-colors">
       {toastElement}
