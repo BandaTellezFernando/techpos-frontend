@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-// ¡AQUÍ ESTÁ LA CORRECCIÓN! Ya no importamos 'Calendar'
-import { Filter, FileDown, Banknote, QrCode, CreditCard, CheckCircle2 } from 'lucide-react';
+// IMPORTAMOS AlertTriangle para la notificación de error
+import { Filter, FileDown, Banknote, QrCode, CreditCard, CheckCircle2, AlertTriangle } from 'lucide-react';
 import api from '../../api/axios';
-import { generarReportePDF } from '../../utils/pdfGenerator'; // <-- IMPORTAMOS EL GENERADOR PDF
+import { generarReportePDF } from '../../utils/pdfGenerator';
 
 interface ReporteItem {
   metodo: string;
@@ -17,8 +17,16 @@ export default function Reportes() {
   const [fechaFin, setFechaFin] = useState(hoyStr);
   const [cargando, setCargando] = useState(false);
   
+  // NUEVO: Estado para la notificación bonita
+  const [toast, setToast] = useState<{mensaje: string, tipo: 'exito' | 'error'} | null>(null);
+  
   const [resumen, setResumen] = useState<ReporteItem[]>([]);
   const [granTotal, setGranTotal] = useState(0);
+
+  const mostrarNotificacion = (mensaje: string, tipo: 'exito' | 'error') => {
+    setToast({ mensaje, tipo });
+    setTimeout(() => setToast(null), 4000);
+  };
 
   const cargarReporte = useCallback(async () => {
     try {
@@ -27,8 +35,10 @@ export default function Reportes() {
       setResumen(res.data.resumenCobros);
       setGranTotal(res.data.granTotalBs);
     } catch (error) {
+      // AQUÍ CAPTURAMOS EL ERROR REAL DEL BACKEND
+      const err = error as { response?: { data?: { mensaje?: string } } };
       console.error('Error al cargar reporte:', error);
-      alert('Error al consultar el cierre de caja');
+      mostrarNotificacion(err.response?.data?.mensaje || 'Error de conexión con el servidor', 'error');
     } finally {
       setCargando(false);
     }
@@ -44,8 +54,16 @@ export default function Reportes() {
   const tarjeta = getDatoMetodo('Tarjeta');
 
   return (
-    <div className="flex flex-col h-full animate-fade-in p-4 md:p-8 overflow-y-auto w-full">
+    <div className="flex flex-col h-full animate-fade-in p-4 md:p-8 overflow-y-auto w-full relative">
       
+      {/* RENDERIZAMOS LA NOTIFICACIÓN MODERNA */}
+      {toast && (
+        <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl font-bold text-sm animate-fade-in ${toast.tipo === 'error' ? 'bg-ruby-accent text-white' : 'bg-emerald-500 text-white'}`}>
+          {toast.tipo === 'error' ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+          {toast.mensaje}
+        </div>
+      )}
+
       <div className="mb-6 md:mb-8">
         <h2 className="text-2xl md:text-3xl font-bold">Reportes · Cierre de Caja</h2>
         <p className="opacity-70 mt-1 text-sm md:text-base">Resumen por método de pago {cargando && '(Actualizando...)'}</p>
@@ -70,7 +88,6 @@ export default function Reportes() {
           <button onClick={cargarReporte} className="flex-1 xl:flex-none justify-center bg-ruby-accent text-white px-6 py-3 rounded-xl font-bold flex items-center gap-2 hover:opacity-90 transition-opacity shadow-sm">
             <Filter size={18} /> Filtrar
           </button>
-          {/* <-- BOTÓN EXPORTAR CONECTADO AL PDF --> */}
           <button 
             onClick={() => generarReportePDF(fechaInicio, fechaFin, resumen, granTotal)}
             disabled={resumen.length === 0}

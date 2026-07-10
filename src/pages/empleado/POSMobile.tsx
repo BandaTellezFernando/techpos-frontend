@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useCartStore, type Producto } from '../../store/cartStore';
-import { Search, Smartphone, Headphones, ShoppingCart, ChevronLeft, CreditCard, Banknote, QrCode, X, Edit3, AlertTriangle, ScanLine, CheckCircle2 } from 'lucide-react';
+import { Search, Smartphone, Headphones, ShoppingCart, ChevronLeft, CreditCard, Banknote, QrCode, X, Edit3, AlertTriangle, ScanLine, CheckCircle2, LogOut } from 'lucide-react';
 import api from '../../api/axios';
 import { generarTicketPDF } from '../../utils/pdfGenerator';
 import ScannerModal from '../../components/ScannerModal';
@@ -37,6 +37,12 @@ export default function POSMobile() {
   const mostrarNotificacion = (mensaje: string, tipo: 'exito' | 'error') => {
     setToast({ mensaje, tipo });
     setTimeout(() => setToast(null), 4000);
+  };
+
+  // NUESTRA FUNCIÓN LOCAL Y SEGURA PARA CERRAR SESIÓN (EMPLEADO)
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.replace('/');
   };
 
   const cargarInventario = useCallback(async () => {
@@ -115,6 +121,14 @@ export default function POSMobile() {
         {toastElement}
         <div className="flex-1 flex flex-col overflow-hidden pt-4 px-4 pb-32">
           
+          {/* HEADER DEL EMPLEADO CON BOTÓN DE CERRAR SESIÓN INTEGRADO */}
+          <div className="flex justify-between items-center mb-2">
+            <h2 className="text-xl font-bold opacity-60">POS Móvil</h2>
+            <button onClick={handleLogout} className="p-2 bg-black/5 dark:bg-white/5 rounded-full hover:bg-ruby-accent hover:text-white transition-all shadow-sm">
+              <LogOut size={20} />
+            </button>
+          </div>
+
           <div className="flex gap-2 overflow-x-auto pb-4 mb-2 snap-x hide-scrollbar mt-2">
             <button onClick={() => setTabActiva('smartphones')} className={`snap-start whitespace-nowrap px-6 py-3 rounded-xl font-bold transition-all flex items-center gap-2 ${tabActiva === 'smartphones' ? 'border-2 border-ruby-accent text-ruby-accent bg-ruby-accent/10 shadow-[0_0_15px_rgba(225,29,72,0.15)]' : 'border border-ruby-textLight/20 dark:border-ruby-textDark/20 opacity-70'}`}>
               <Smartphone size={18} /> Smartphones 
@@ -147,12 +161,6 @@ export default function POSMobile() {
                         </div>
                         <p className="text-[10px] opacity-60 uppercase font-bold tracking-widest">{producto.marca}</p>
                         <h3 className="font-bold text-base leading-tight mt-1 mb-3">{producto.nombre}</h3>
-                        {(producto.ram || producto.almacenamiento) && (
-                          <div className="flex gap-2 mb-3 flex-wrap">
-                            {producto.ram && <span className="text-[10px] font-bold bg-ruby-accent/10 text-ruby-accent border border-ruby-accent/20 px-2 py-1 rounded">{producto.ram}</span>}
-                            {producto.almacenamiento && <span className="text-[10px] font-bold bg-ruby-accent/10 text-ruby-accent border border-ruby-accent/20 px-2 py-1 rounded">{producto.almacenamiento}</span>}
-                          </div>
-                        )}
                       </div>
                       <div className="mt-2 flex justify-between items-end border-t border-ruby-textLight/10 dark:border-white/5 pt-3">
                         <p className="text-ruby-priceLight dark:text-ruby-priceDark font-mono text-sm font-bold">Bs. {producto.precioBase}</p>
@@ -172,9 +180,6 @@ export default function POSMobile() {
               <span className="bg-ruby-accent text-white px-3 py-1 rounded-full text-xs font-bold mb-4">Ticket de Venta</span>
               <ShoppingCart className="opacity-20 mb-2" size={48} strokeWidth={1.5} />
               <p className="opacity-50 text-sm font-bold">Tu carrito está vacío</p>
-              <button disabled className="w-full mt-6 bg-ruby-textLight/10 dark:bg-ruby-accent/30 text-ruby-textLight/40 dark:text-white/50 py-4 rounded-xl font-bold text-lg flex justify-center items-center gap-2">
-                <CreditCard size={20} /> COBRAR
-              </button>
             </div>
           ) : (
             <div>

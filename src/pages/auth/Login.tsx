@@ -16,25 +16,24 @@ export default function Login() {
       setCargando(true);
       setError('');
       
-      // Llamamos a la nueva ruta unificada
       const res = await api.post('/auth/login', { pin });
       
-      // Guardamos la sesión
       localStorage.setItem('token', res.data.token);
       localStorage.setItem('rol', res.data.rol);
       
-      // Redirigimos según el rol
-      if (res.data.rol === 'Gerente') {
+      // LA CORRECCIÓN ESTÁ AQUÍ: Comparamos siempre en minúsculas
+      const rolDelUsuario = String(res.data.rol).toLowerCase();
+
+      if (rolDelUsuario === 'gerente') {
         window.location.href = '/dashboard';
       } else {
         window.location.href = '/pos';
       }
     } catch (error) {
-      // AQUÍ ESTÁ LA MAGIA DE TYPESCRIPT: Le decimos qué forma tiene el error de Axios
       const err = error as { response?: { data?: { mensaje?: string } } };
       
       if (err.response?.data?.mensaje === 'INACTIVO') {
-        setModalInactivo(true); // Dispara el modal de bloqueo
+        setModalInactivo(true);
       } else {
         setError(err.response?.data?.mensaje || 'Error al iniciar sesión');
       }

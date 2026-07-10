@@ -1,6 +1,5 @@
-//src/pages/gerente/Empleados.tsx
-import { useState, useEffect } from 'react';
-import { Plus, Edit3, Hash, X } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Plus, Edit3, Hash, X, AlertTriangle, CheckCircle2 } from 'lucide-react';
 import api from '../../api/axios'; 
 
 type Empleado = {
@@ -20,27 +19,33 @@ export default function Empleados() {
   
   const [modalAbierto, setModalAbierto] = useState(false);
   const [empleadoEditando, setEmpleadoEditando] = useState<Empleado | null>(null);
+  const [toast, setToast] = useState<{mensaje: string, tipo: 'exito' | 'error'} | null>(null);
   
   const [formData, setFormData] = useState({ nombreCompleto: '', rol: 'Vendedor', ci: '', celular: '' });
 
-  const cargarEmpleados = async () => {
+  const mostrarNotificacion = (mensaje: string, tipo: 'exito' | 'error') => {
+    setToast({ mensaje, tipo });
+    setTimeout(() => setToast(null), 4000);
+  };
+
+  const cargarEmpleados = useCallback(async () => {
     try {
       setCargando(true);
       const res = await api.get('/auth/empleados');
       setEmpleados(res.data.empleados);
     } catch (error) {
       console.error('Error al cargar empleados:', error);
+      mostrarNotificacion('Error de conexión con el servidor', 'error');
     } finally {
       setCargando(false);
     }
-  };
+  }, []); // <--- Nota este arreglo vacío al final
 
   useEffect(() => {
-    // Usamos setTimeout para evitar el error del linter de React
     setTimeout(() => {
       cargarEmpleados();
     }, 0);
-  }, []);
+  }, [cargarEmpleados]);
 
   const abrirNuevoModal = () => {
     setEmpleadoEditando(null);
@@ -50,13 +55,15 @@ export default function Empleados() {
 
   const abrirEditarModal = (emp: Empleado) => {
     setEmpleadoEditando(emp);
-    setFormData({ nombreCompleto: emp.nombreCompleto, rol: emp.rol, ci: emp.ci, celular: emp.celular });
+    // Para que el select del modal muestre correctamente la primera letra mayúscula
+    const rolCapitalizado = emp.rol.charAt(0).toUpperCase() + emp.rol.slice(1);
+    setFormData({ nombreCompleto: emp.nombreCompleto, rol: rolCapitalizado, ci: emp.ci, celular: emp.celular });
     setModalAbierto(true);
   };
 
   const guardarEmpleado = async () => {
     if (!formData.nombreCompleto.trim() || !formData.ci.trim() || !formData.celular.trim()) {
-      alert("Por favor llena todos los campos obligatorios");
+      mostrarNotificacion("Por favor llena todos los campos obligatorios", "error");
       return;
     }
 
@@ -66,15 +73,16 @@ export default function Empleados() {
           nombreCompleto: formData.nombreCompleto, 
           rol: formData.rol 
         });
+        mostrarNotificacion("Usuario actualizado exitosamente", "exito");
       } else {
         await api.post('/auth/empleados', formData);
+        mostrarNotificacion("Usuario creado exitosamente", "exito");
       }
       setModalAbierto(false);
       cargarEmpleados(); 
     } catch (error) {
-      // Reemplazamos el 'any' tipando el error al estilo Axios
       const err = error as { response?: { data?: { mensaje?: string } } };
-      alert(err.response?.data?.mensaje || 'Error al guardar el empleado');
+      mostrarNotificacion(err.response?.data?.mensaje || 'Error al guardar el empleado', 'error');
     }
   };
 
@@ -84,8 +92,10 @@ export default function Empleados() {
       await api.put(`/auth/empleados/${emp._id}`, { estado: nuevoEstado });
       setPinMostrado(null);
       cargarEmpleados();
+      mostrarNotificacion(`Usuario ${nuevoEstado === 'activo' ? 'activado' : 'desactivado'}`, 'exito');
     } catch (error) {
       console.error('Error al cambiar estado:', error);
+      mostrarNotificacion('Error al cambiar el estado', 'error');
     }
   };
 
@@ -93,10 +103,10 @@ export default function Empleados() {
     try {
       const res = await api.post('/auth/generar-codigo', { empleadoId, horasValidez: 8 });
       setPinMostrado(res.data.codigo); 
+      mostrarNotificacion('PIN temporal generado', 'exito');
     } catch (error) {
-      // Reemplazamos el 'any' tipando el error al estilo Axios
       const err = error as { response?: { data?: { mensaje?: string } } };
-      alert(err.response?.data?.mensaje || 'Error al generar código');
+      mostrarNotificacion(err.response?.data?.mensaje || 'Error al generar código', 'error');
     }
   };
 
@@ -105,6 +115,14 @@ export default function Empleados() {
   return (
     <div className="flex flex-col h-full animate-fade-in p-8 overflow-y-auto w-full relative">
       
+      {/* NOTIFICACIONES TOAST (Reemplazan al alert gris) */}
+      {toast && (
+        <div className={`absolute top-6 left-1/2 -translate-x-1/2 z-[100] flex items-center gap-3 px-6 py-3 rounded-xl shadow-2xl font-bold text-sm animate-fade-in ${toast.tipo === 'error' ? 'bg-ruby-accent text-white' : 'bg-emerald-500 text-white'}`}>
+          {toast.tipo === 'error' ? <AlertTriangle size={18} /> : <CheckCircle2 size={18} />}
+          {toast.mensaje}
+        </div>
+      )}
+
       <div className="flex justify-between items-start mb-8">
         <div>
           <h2 className="text-3xl font-bold">Empleados</h2>
@@ -124,6 +142,7 @@ export default function Empleados() {
           {empleados.map((emp) => {
             const iniciales = emp.nombreCompleto.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
             const esActivo = emp.estado === 'activo';
+            const esVendedor = emp.rol === 'vendedor'; // Identificamos si es vendedor
 
             return (
               <div key={emp._id} className={`bg-ruby-panelLight dark:bg-ruby-panelDark border border-ruby-textLight/10 dark:border-ruby-textDark/10 p-5 rounded-2xl flex justify-between items-center transition-all shadow-sm ${!esActivo ? 'opacity-60 grayscale-[50%]' : ''}`}>
@@ -141,7 +160,7 @@ export default function Empleados() {
                         <div className={`bg-white w-4 h-4 rounded-full shadow-sm transform transition-transform ${esActivo ? 'translate-x-4' : 'translate-x-0'}`}></div>
                       </div>
                     </div>
-                    <p className="text-xs opacity-60">{emp.rol}</p>
+                    <p className="text-xs opacity-60 uppercase font-bold tracking-widest">{emp.rol}</p>
                   </div>
                 </div>
 
@@ -153,13 +172,20 @@ export default function Empleados() {
                     <Edit3 size={18} />
                   </button>
 
-                  <button 
-                    onClick={() => generarPin(emp._id)}
-                    disabled={!esActivo}
-                    className="flex items-center gap-2 border border-ruby-textLight/20 dark:border-ruby-textDark/20 px-4 py-2 rounded-lg font-bold text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:cursor-not-allowed disabled:hover:bg-transparent"
-                  >
-                    <Hash size={16} className="text-ruby-accent" /> PIN
-                  </button>
+                  {/* MAGIA AQUÍ: Solo mostramos el botón PIN si es Vendedor */}
+                  {esVendedor ? (
+                    <button 
+                      onClick={() => generarPin(emp._id)}
+                      disabled={!esActivo}
+                      className="flex items-center gap-2 border border-ruby-textLight/20 dark:border-ruby-textDark/20 px-4 py-2 rounded-lg font-bold text-sm hover:bg-black/5 dark:hover:bg-white/5 transition-colors disabled:cursor-not-allowed disabled:hover:bg-transparent"
+                    >
+                      <Hash size={16} className="text-ruby-accent" /> PIN
+                    </button>
+                  ) : (
+                    <div className="flex items-center px-3 py-2 bg-black/5 dark:bg-white/5 rounded-lg opacity-50 text-xs font-bold font-mono">
+                      USA SU C.I.
+                    </div>
+                  )}
                 </div>
               </div>
             );
@@ -178,7 +204,7 @@ export default function Empleados() {
           ) : (
             <div className="flex flex-col items-center opacity-40">
               <Hash size={64} strokeWidth={1} className="mb-4" />
-              <p className="max-w-xs font-medium">Selecciona un empleado activo y pulsa "PIN" para generar su código de acceso al POS móvil.</p>
+              <p className="max-w-xs font-medium">Selecciona un vendedor activo y pulsa "PIN" para generar su código de acceso al POS móvil.</p>
             </div>
           )}
         </div>
@@ -189,7 +215,7 @@ export default function Empleados() {
           <div className="bg-ruby-bgLight dark:bg-ruby-bgDark w-full max-w-md rounded-2xl shadow-2xl overflow-hidden border border-ruby-textLight/10 dark:border-white/10">
             
             <div className="flex justify-between items-center p-6 border-b border-ruby-textLight/10 dark:border-white/5 bg-ruby-panelLight dark:bg-ruby-panelDark">
-              <h3 className="font-bold text-xl">{empleadoEditando ? 'Editar Empleado' : 'Nuevo Empleado'}</h3>
+              <h3 className="font-bold text-xl">{empleadoEditando ? 'Editar Usuario' : 'Nuevo Usuario'}</h3>
               <button onClick={() => setModalAbierto(false)} className="opacity-50 hover:opacity-100"><X size={24} /></button>
             </div>
 
@@ -215,31 +241,32 @@ export default function Empleados() {
                   placeholder="Carnet de Identidad" 
                   className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors disabled:opacity-50" 
                 />
+                {!empleadoEditando && formData.rol === 'Gerente' && (
+                  <p className="text-[10px] text-emerald-500 mt-2">💡 Este C.I. será la contraseña del nuevo Gerente.</p>
+                )}
               </div>
               <div className="flex gap-4">
                 <div className="flex-1">
                   <label className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-2 block">Celular</label>
                   <input 
                     type="text" 
-                    disabled={!!empleadoEditando}
                     value={formData.celular}
                     onChange={(e) => setFormData({ ...formData, celular: e.target.value })}
                     placeholder="Ej. 77712345" 
-                    className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors disabled:opacity-50" 
+                    className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors" 
                   />
                 </div>
-                {/* ELIMINA EL INPUT DE TEXTO Y PON ESTE SELECTOR */}
-<div className="flex-1">
-  <label className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-2 block">Rol / Cargo</label>
-  <select 
-    value={formData.rol}
-    onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
-    className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors appearance-none" 
-  >
-    <option value="Vendedor">Vendedor</option>
-    <option value="Gerente">Gerente</option>
-  </select>
-</div>
+                <div className="flex-1">
+                  <label className="text-[10px] font-bold opacity-50 tracking-widest uppercase mb-2 block">Rol / Cargo</label>
+                  <select 
+                    value={formData.rol}
+                    onChange={(e) => setFormData({ ...formData, rol: e.target.value })}
+                    className="w-full bg-ruby-panelLight dark:bg-[#261C1D] border border-ruby-textLight/20 dark:border-white/10 rounded-xl py-3 px-4 outline-none focus:border-ruby-accent transition-colors appearance-none font-bold" 
+                  >
+                    <option value="Vendedor">Vendedor</option>
+                    <option value="Gerente">Gerente</option>
+                  </select>
+                </div>
               </div>
             </div>
 
@@ -252,7 +279,7 @@ export default function Empleados() {
               </button>
               <button 
                 onClick={guardarEmpleado}
-                className="flex-1 py-3 rounded-xl font-bold bg-ruby-accent text-white hover:opacity-90 transition-opacity"
+                className="flex-1 py-3 rounded-xl font-bold bg-ruby-accent text-white hover:opacity-90 transition-opacity shadow-sm"
               >
                 Guardar
               </button>

@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { NavLink } from 'react-router-dom';
 import { Zap, LayoutDashboard, ShoppingBag, Package, LineChart, Users, Sun, Moon, LogOut, X } from 'lucide-react';
-import { cerrarSesion } from '../../utils/pdfGenerator'; // <-- IMPORTAMOS LA FUNCIÓN
 
 export default function SidebarGerente({ onClose }: { onClose?: () => void }) {
   const [modoOscuro, setModoOscuro] = useState(true);
@@ -13,6 +12,12 @@ export default function SidebarGerente({ onClose }: { onClose?: () => void }) {
       document.documentElement.classList.remove('dark');
     }
   }, [modoOscuro]);
+
+  // NUESTRA FUNCIÓN LOCAL Y SEGURA PARA CERRAR SESIÓN
+  const handleLogout = () => {
+    localStorage.clear();
+    window.location.replace('/');
+  };
 
   const clasesEnlace = ({ isActive }: { isActive: boolean }) => 
     `w-full flex items-center gap-3 p-3 rounded-lg transition-all ${
@@ -72,8 +77,8 @@ export default function SidebarGerente({ onClose }: { onClose?: () => void }) {
           </span>
         </div>
 
-        {/* <-- AQUÍ ESTÁ APLICADO EL CERRAR SESIÓN --> */}
-        <button onClick={cerrarSesion} className="w-full flex items-center gap-3 p-2 text-sm font-bold opacity-70 hover:opacity-100 hover:text-ruby-accent transition-colors">
+        {/* <-- BOTÓN CONECTADO CORRECTAMENTE A handleLogout --> */}
+        <button onClick={handleLogout} className="w-full flex items-center gap-3 p-2 text-sm font-bold opacity-70 hover:opacity-100 hover:text-ruby-accent transition-colors">
           <LogOut size={20} /> Cerrar Sesión
         </button>
       </div>
